@@ -1,4 +1,4 @@
-module mp3lister
+module pulse
 
 go 1.21
 

@@ -4,6 +4,9 @@ pulse
 # AI
 AGENTS.md
 
+# Editor settings
+.vscode/
+
 # Common Go build/test artifacts.
 *.exe
 *.exe~

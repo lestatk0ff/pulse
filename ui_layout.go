@@ -13,14 +13,15 @@ func newTUIApp(dir string, files []*AudioFile) *app {
 	playerBinary, playerBaseArgs := findPlayer()
 
 	a := &app{
-		tv:             tview.NewApplication(),
-		files:          files,
-		allFiles:       files,
-		dir:            dir,
-		playerBinary:   playerBinary,
-		playerBaseArgs: playerBaseArgs,
-		volume:         80,
-		themeName:      "Default",
+		tv:               tview.NewApplication(),
+		files:            files,
+		allFiles:         files,
+		dir:              dir,
+		playerBinary:     playerBinary,
+		playerBaseArgs:   playerBaseArgs,
+		volume:           80,
+		colorPaletteName: "Default",
+		borderStyleName:  "Classic",
 	}
 	a.build()
 	return a
@@ -58,7 +59,7 @@ func (a *app) buildTable() {
 				SetBackgroundColor(tcell.ColorDarkBlue),
 		)
 	}
-	a.applyTableHeaderTheme(a.themeName)
+	a.applyTableHeaderTheme(a.colorPaletteName)
 
 	a.populateTable()
 
@@ -76,15 +77,15 @@ func (a *app) applyTableHeaderTheme(name string) {
 	if a.table == nil {
 		return
 	}
-	theme := themeByName(name)
+	palette := colorPaletteByName(name)
 
 	for col := 0; col < 4; col++ {
 		cell := a.table.GetCell(0, col)
 		if cell == nil {
 			continue
 		}
-		cell.SetTextColor(theme.TableHeaderTextColor).
-			SetBackgroundColor(theme.TableHeaderBgColor).
+		cell.SetTextColor(palette.TableHeaderTextColor).
+			SetBackgroundColor(palette.TableHeaderBgColor).
 			SetAttributes(tcell.AttrBold).
 			SetSelectable(false)
 	}
@@ -166,7 +167,7 @@ func (a *app) buildActions() {
 		AddItem("  [2]  Convert to OGG format", "New file: <name>.ogg (same dir)", '2', nil).
 		AddItem("  [z]  Shuffle current list", "Randomize the order shown in the file table", 'z', nil).
 		AddItem("  [r]  Refresh file list", "Re-scan the directory", 'r', nil).
-		AddItem("  [q]  Quit", "Exit mp3lister", 'q', func() { a.tv.Stop() })
+		AddItem("  [q]  Quit", "Exit Pulse", 'q', func() { a.tv.Stop() })
 
 	a.actionList.SetSelectedFunc(func(idx int, _, _ string, _ rune) {
 		a.runAction(idx)
@@ -226,7 +227,7 @@ func (a *app) buildLayout() {
 
 	a.rootPages = tview.NewPages()
 	a.rootPages.AddPage("main", root, true, true)
-	a.applyFrameTheme(a.themeName)
+	a.applyTheme()
 
 	a.tv.SetInputCapture(func(ev *tcell.EventKey) *tcell.EventKey {
 		switch ev.Key() {
@@ -306,21 +307,30 @@ func (a *app) buildLayout() {
 	a.tv.SetRoot(a.rootPages, true).SetFocus(a.table)
 }
 
-// applyFrameTheme updates frame border/title colors using one of the named presets.
-func (a *app) applyFrameTheme(name string) {
-	theme := themeByName(name)
-	a.themeName = theme.Name
-	a.applyTableHeaderTheme(theme.Name)
+// applyTheme applies the selected color palette and border style to all UI frames.
+func (a *app) applyTheme() {
+	palette := colorPaletteByName(a.colorPaletteName)
+	borderStyle := borderStyleByName(a.borderStyleName)
+	a.colorPaletteName = palette.Name
+	a.borderStyleName = borderStyle.Name
+	applyGlobalBorderStyle(borderStyle)
+	a.applyTableHeaderTheme(palette.Name)
 
-	a.detailsFrame.SetTitleColor(theme.DetailsFrameColor).SetBorderColor(theme.DetailsFrameColor)
-	a.tableFrame.SetTitleColor(theme.TableFrameColor).SetBorderColor(theme.TableFrameColor)
-	a.actionsFrame.SetTitleColor(theme.ActionsFrameColor).SetBorderColor(theme.ActionsFrameColor)
-	a.hotkeysFrame.SetTitleColor(theme.HotkeysFrameColor).SetBorderColor(theme.HotkeysFrameColor)
+	a.detailsFrame.SetTitleColor(palette.DetailsFrameColor).SetBorderColor(palette.DetailsFrameColor).SetBorderAttributes(borderStyle.FrameAttributes)
+	a.tableFrame.SetTitleColor(palette.TableFrameColor).SetBorderColor(palette.TableFrameColor).SetBorderAttributes(borderStyle.FrameAttributes)
+	a.actionsFrame.SetTitleColor(palette.ActionsFrameColor).SetBorderColor(palette.ActionsFrameColor).SetBorderAttributes(borderStyle.FrameAttributes)
+	a.hotkeysFrame.SetTitleColor(palette.HotkeysFrameColor).SetBorderColor(palette.HotkeysFrameColor).SetBorderAttributes(borderStyle.FrameAttributes)
 	if a.configList != nil {
-		a.configList.SetTitleColor(theme.OverlayFrameColor).SetBorderColor(theme.OverlayFrameColor)
+		a.configList.SetTitleColor(palette.OverlayFrameColor).SetBorderColor(palette.OverlayFrameColor).SetBorderAttributes(borderStyle.OverlayAttributes)
 	}
 	if a.themesList != nil {
-		a.themesList.SetTitleColor(theme.OverlayFrameColor).SetBorderColor(theme.OverlayFrameColor)
+		a.themesList.SetTitleColor(palette.OverlayFrameColor).SetBorderColor(palette.OverlayFrameColor).SetBorderAttributes(borderStyle.OverlayAttributes)
+	}
+	if a.themeColorsList != nil {
+		a.themeColorsList.SetTitleColor(palette.OverlayFrameColor).SetBorderColor(palette.OverlayFrameColor).SetBorderAttributes(borderStyle.OverlayAttributes)
+	}
+	if a.borderStylesList != nil {
+		a.borderStylesList.SetTitleColor(palette.OverlayFrameColor).SetBorderColor(palette.OverlayFrameColor).SetBorderAttributes(borderStyle.OverlayAttributes)
 	}
 }
 

@@ -58,15 +58,18 @@ type app struct {
 	actionsFrame     *tview.Flex        // bordered frame that wraps actionList
 	hotkeysFrame     *tview.Flex        // bordered frame that wraps hotkeysView
 	configList       *tview.List        // configuration menu shown when C is pressed
-	themesList       *tview.List        // themes submenu shown from Configuration -> Themes
+	themesList       *tview.List        // themes configuration menu with Colors/Border entries
+	themeColorsList  *tview.List        // color palette submenu list
+	borderStylesList *tview.List        // border style submenu list
 	files            []*AudioFile       // currently displayed files (may be a filtered subset)
 	allFiles         []*AudioFile       // full unfiltered list
 	filteredBuf      []*AudioFile       // reusable backing slice to reduce filter allocations
 	filterActive     bool               // true while the filter input bar is visible
 	filterDebounce   *time.Timer        // coalesces rapid filter keystrokes into one apply
 	overlayOpen      bool               // true while a modal overlay page is visible
-	activeOverlay    string             // active overlay page name: "configuration", "themes", or ""
-	themeName        string             // selected frame theme name, shown in theme picker
+	activeOverlay    string             // active overlay page name: "configuration", "themes", "theme-colors", "theme-borders", or ""
+	colorPaletteName string             // selected color palette name
+	borderStyleName  string             // selected border style name
 	previousFocus    tview.Primitive    // focus owner before opening an overlay
 	dir              string             // the directory path passed on the command line
 	selectedFile     *AudioFile         // file currently highlighted in the table

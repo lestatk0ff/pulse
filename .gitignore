@@ -1,0 +1,18 @@
+# Built app binary produced by: go build -o mp3lister .
+pulse
+
+# AI
+AGENTS.md
+
+# Common Go build/test artifacts.
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Optional build output folders if you use them later.
+build/
+dist/

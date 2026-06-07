@@ -10,24 +10,12 @@ import (
 	"time"
 )
 
-// audioPlayers lists supported CLI players in order of preference.
-// The first one found on PATH is used.
-var audioPlayers = []struct {
-	name string
-	args []string
-}{
-	{"mpv", []string{"--no-terminal", "--no-video"}},
-	{"ffplay", []string{"-nodisp", "-autoexit", "-loglevel", "quiet"}},
-	{"mplayer", []string{"-really-quiet", "-vo", "null"}},
-}
+var mpvBaseArgs = []string{"--no-terminal", "--no-video"}
 
-// findPlayer returns the name and default arguments of the first supported player
-// found on PATH, or empty strings if none is installed.
+// findPlayer returns "mpv" and its default args if mpv is on PATH, otherwise empty strings.
 func findPlayer() (string, []string) {
-	for _, p := range audioPlayers {
-		if _, err := exec.LookPath(p.name); err == nil {
-			return p.name, p.args
-		}
+	if _, err := exec.LookPath("mpv"); err == nil {
+		return "mpv", mpvBaseArgs
 	}
 	return "", nil
 }
@@ -42,7 +30,7 @@ func (a *app) playFile(f *AudioFile) {
 func (a *app) playRadio(s *RadioStation) {
 	playerName, playerArgs := a.playerBinary, a.playerBaseArgs
 	if playerName == "" {
-		a.setStatus("[red]No player found — install mpv, ffplay, or mplayer")
+		a.setStatus("[red]No player found — install mpv")
 		return
 	}
 	if a.currentPlay != nil {
@@ -59,12 +47,7 @@ func (a *app) playRadio(s *RadioStation) {
 	if a.volume > 100 {
 		a.volume = 100
 	}
-	switch playerName {
-	case "mpv":
-		args = append(args, fmt.Sprintf("--volume=%d", a.volume))
-	case "ffplay", "mplayer":
-		args = append(args, "-volume", fmt.Sprintf("%d", a.volume))
-	}
+	args = append(args, fmt.Sprintf("--volume=%d", a.volume))
 
 	// mpv exposes a JSON IPC socket we can query for current ICY track title.
 	var socketPath string
@@ -200,7 +183,7 @@ func queryMpvTitle(socketPath string) string {
 func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 	playerName, playerArgs := a.playerBinary, a.playerBaseArgs
 	if playerName == "" {
-		a.setStatus("[red]No player found — install mpv, ffplay, or mplayer")
+		a.setStatus("[red]No player found — install mpv")
 		return
 	}
 
@@ -253,14 +236,7 @@ func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 func (a *app) playerCommandArgs(playerName string, playerArgs []string, path string, startSeconds int) []string {
 	args := append([]string{}, playerArgs...)
 	if startSeconds > 0 {
-		switch playerName {
-		case "mpv":
-			args = append(args, fmt.Sprintf("--start=%d", startSeconds))
-		case "mplayer":
-			args = append(args, "-ss", fmt.Sprintf("%d", startSeconds))
-		case "ffplay":
-			args = append(args, "-ss", fmt.Sprintf("%d", startSeconds))
-		}
+		args = append(args, fmt.Sprintf("--start=%d", startSeconds))
 	}
 	if a.volume < 0 {
 		a.volume = 0
@@ -268,12 +244,7 @@ func (a *app) playerCommandArgs(playerName string, playerArgs []string, path str
 	if a.volume > 100 {
 		a.volume = 100
 	}
-	switch playerName {
-	case "mpv":
-		args = append(args, fmt.Sprintf("--volume=%d", a.volume))
-	case "ffplay", "mplayer":
-		args = append(args, "-volume", fmt.Sprintf("%d", a.volume))
-	}
+	args = append(args, fmt.Sprintf("--volume=%d", a.volume))
 	args = append(args, path)
 	return args
 }

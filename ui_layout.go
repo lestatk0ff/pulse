@@ -28,8 +28,8 @@ func newTUIApp(dir string, files []*AudioFile) *app {
 
 // build constructs all widgets and assembles the final layout.
 func (a *app) build() {
-	a.buildTable()
 	a.buildDetails()
+	a.buildTable()
 	a.buildActions()
 	a.buildLayout()
 }

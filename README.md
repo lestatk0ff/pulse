@@ -21,17 +21,13 @@ Minimum tools needed for the app to work end-to-end:
 
 - Go `1.21+`
 - FFmpeg tools (must include both `ffmpeg` and `ffprobe` in `PATH`)
-- At least one supported CLI audio player in `PATH`:
-  - `mpv` (preferred)
-  - `ffplay`
-  - `mplayer`
+- `mpv` in `PATH`
 
 ## Installation Instructions (Official Pages)
 
 - Go install docs: https://go.dev/doc/install
 - FFmpeg downloads/install docs: https://ffmpeg.org/download.html
 - mpv install docs: https://mpv.io/installation/
-- MPlayer project page: https://mplayerhq.hu/
 
 ## Build And Run
 
@@ -76,7 +72,7 @@ Press `A` while in radio mode to open the **Add Radio Station** form:
 
 Fill in the fields, tab to the **Add** button, and press `Enter`. The station is saved immediately to `~/.config/pulse/radio.json` (or `$XDG_CONFIG_HOME/pulse/radio.json`) and appears at the bottom of the list highlighted in cyan.
 
-Most stream formats that `mpv`/`ffplay`/`mplayer` support work: direct MP3/AAC/OGG streams, HLS (`.m3u8`), and playlist files (`.pls`, `.m3u`).
+Most stream formats that `mpv` supports work: direct MP3/AAC/OGG streams, HLS (`.m3u8`), and playlist files (`.pls`, `.m3u`).
 
 ### Removing a custom station
 
@@ -99,7 +95,7 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 - `themes.go`: built-in frame/table-header theme definitions.
 - `scanner.go`: recursive audio file discovery.
 - `media_probe.go`: `ffprobe` metadata extraction for a selected file.
-- `player.go`: CLI player integration (`mpv`/`ffplay`/`mplayer`), including radio streaming.
+- `player.go`: mpv integration for file playback and radio streaming.
 - `actions.go`: conversion/shuffle/refresh action handlers.
 - `helpers.go`: small formatting/string helpers.
 

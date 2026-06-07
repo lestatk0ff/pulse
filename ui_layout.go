@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -65,6 +64,13 @@ func (a *app) buildTable() {
 
 	// Keep detail pane synchronized with the row cursor.
 	a.table.SetSelectionChangedFunc(func(row, _ int) {
+		if a.radioMode {
+			if row >= 1 && row <= len(a.stations) {
+				a.selectedStation = a.stations[row-1]
+				a.showRadioDetails(a.selectedStation)
+			}
+			return
+		}
 		if row >= 1 && row <= len(a.files) {
 			a.selectedFile = a.files[row-1]
 			a.probeAndShowDetails(a.selectedFile)
@@ -128,26 +134,10 @@ func (a *app) buildActions() {
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 
-	hotkeyLine := func(key, desc string) string {
-		return fmt.Sprintf("[lightyellow]%-6s[white] [gray]- %s", key, desc)
-	}
-
 	a.hotkeysView = tview.NewTextView().
 		SetDynamicColors(true).
-		SetTextAlign(tview.AlignLeft).
-		SetText(strings.Join([]string{
-			hotkeyLine("Tab", "Switch panel"),
-			hotkeyLine("C", "Open Configuration"),
-			hotkeyLine("↑↓", "Navigate"),
-			hotkeyLine("Enter", "Play"),
-			hotkeyLine("Z", "Shuffle list"),
-			hotkeyLine("S", "Stop"),
-			hotkeyLine("M", "Mute/unmute"),
-			hotkeyLine("+/-", "Volume up/down"),
-			hotkeyLine("Ctrl+F", "Filter"),
-			hotkeyLine("R", "Refresh"),
-			hotkeyLine("Esc", "Quit"),
-		}, "\n"))
+		SetTextAlign(tview.AlignLeft)
+	a.updateHotkeys()
 
 	a.searchBar = tview.NewInputField().
 		SetLabel("Filter (regexp): ").
@@ -230,6 +220,15 @@ func (a *app) buildLayout() {
 	a.applyTheme()
 
 	a.tv.SetInputCapture(func(ev *tcell.EventKey) *tcell.EventKey {
+		// When an overlay is open, only intercept Escape to close it.
+		// All other keys must reach the focused widget (e.g. the add-station form).
+		if a.overlayOpen {
+			if ev.Key() == tcell.KeyEscape {
+				a.handleOverlayEscape()
+			}
+			return ev
+		}
+
 		switch ev.Key() {
 		case tcell.KeyCtrlF:
 			if !a.filterActive {
@@ -249,10 +248,6 @@ func (a *app) buildLayout() {
 			}
 			return nil
 		case tcell.KeyEscape:
-			if a.overlayOpen {
-				a.handleOverlayEscape()
-				return nil
-			}
 			if a.filterActive {
 				a.exitFilter()
 				return nil
@@ -260,8 +255,24 @@ func (a *app) buildLayout() {
 			a.tv.Stop()
 			return nil
 		case tcell.KeyEnter:
-			if a.table.HasFocus() && a.selectedFile != nil {
-				a.playFile(a.selectedFile)
+			if a.table.HasFocus() {
+				if a.radioMode && a.selectedStation != nil {
+					a.playRadio(a.selectedStation)
+					return nil
+				}
+				if !a.radioMode && a.selectedFile != nil {
+					a.playFile(a.selectedFile)
+					return nil
+				}
+			}
+		case tcell.KeyDelete:
+			if a.radioMode && !a.filterActive {
+				a.deleteSelectedStation()
+				return nil
+			}
+		case tcell.KeyF5:
+			if !a.radioMode && !a.filterActive {
+				a.refresh()
 				return nil
 			}
 		case tcell.KeyRune:
@@ -294,8 +305,18 @@ func (a *app) buildLayout() {
 				a.shuffleCurrentList()
 				return nil
 			case 'r', 'R':
-				a.refresh()
+				a.toggleRadioMode()
 				return nil
+			case 'a', 'A':
+				if a.radioMode {
+					a.openAddStationOverlay()
+					return nil
+				}
+			case 'd', 'D':
+				if a.radioMode {
+					a.deleteSelectedStation()
+					return nil
+				}
 			case 'q', 'Q':
 				a.tv.Stop()
 				return nil

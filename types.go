@@ -73,6 +73,15 @@ type app struct {
 	previousFocus    tview.Primitive    // focus owner before opening an overlay
 	dir              string             // the directory path passed on the command line
 	selectedFile     *AudioFile         // file currently highlighted in the table
+	radioMode        bool               // true when showing the radio station browser
+	stations         []*RadioStation    // currently displayed stations (may be filtered)
+	allStations      []*RadioStation    // full station list (built-ins + custom)
+	radioFilterBuf   []*RadioStation    // reusable backing slice for radio filter
+	selectedStation  *RadioStation      // station currently highlighted in radio mode
+	nowPlayingRadio  *RadioStation      // station currently streaming; nil when a file is playing
+	radioTrack       string             // current ICY StreamTitle polled from mpv IPC ("Artist - Title")
+	mpvSocketPath    string             // path to the mpv IPC socket for the active radio stream
+	stopRadioPoller  chan struct{}       // closed to stop the radio track poller goroutine
 	currentPlay      *exec.Cmd          // running player process; nil when nothing is playing
 	nowPlaying       *AudioFile         // file currently being played; mirrors currentPlay
 	playerName       string             // name of the player binary used for the current track

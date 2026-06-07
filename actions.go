@@ -13,6 +13,9 @@ import (
 // idx matches the order items were added in buildActions
 // (0=convertBitrate, 1=convertOGG, 2=shuffleCurrentList, 3=refresh).
 func (a *app) runAction(idx int) {
+	if a.radioMode {
+		return
+	}
 	if a.selectedFile == nil {
 		a.setStatus("[red]No file selected — navigate to a file in the top panel first.")
 		return
@@ -32,6 +35,9 @@ func (a *app) runAction(idx int) {
 // shuffleCurrentList randomizes the order of the currently visible list.
 // If a filter is active, only filtered results are shuffled.
 func (a *app) shuffleCurrentList() {
+	if a.radioMode {
+		return
+	}
 	if len(a.files) < 2 {
 		a.setStatusTemporary("[grey]Need at least 2 songs to shuffle", 3*time.Second)
 		return

@@ -10,6 +10,9 @@ import (
 
 func (a *app) handleOverlayEscape() {
 	switch a.activeOverlay {
+	case "radio-add":
+		a.closeAddStationOverlay()
+		return
 	case "theme-colors":
 		a.closeThemeColorsOverlay()
 		return

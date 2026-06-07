@@ -108,8 +108,25 @@ func (a *app) renderDetails(f *AudioFile) {
 	a.detailsView.SetText(sb.String())
 }
 
-// updatePlayingBar refreshes the now-playing bar with track name and elapsed time.
+// updatePlayingBar refreshes the now-playing bar with track or station info and elapsed time.
 func (a *app) updatePlayingBar() {
+	if a.nowPlayingRadio != nil {
+		elapsed := time.Since(a.playStart)
+		elapsedStr := fmt.Sprintf("%d:%02d", int(elapsed.Minutes()), int(elapsed.Seconds())%60)
+		vol := fmt.Sprintf("%d%%", a.volume)
+		if a.muted {
+			vol = "MUTED"
+		}
+		stationPart := fmt.Sprintf("[green]▶ Radio:[white] %s", a.nowPlayingRadio.Name)
+		if a.radioTrack != "" {
+			stationPart += fmt.Sprintf("  [grey]♪ %s", a.radioTrack)
+		}
+		a.playingBar.SetText(fmt.Sprintf(
+			"[yellow]%s[white]  %s  [gray]%s  [aqua]Vol:[white] %s  ",
+			a.playerName, stationPart, elapsedStr, vol,
+		))
+		return
+	}
 	if a.nowPlaying == nil {
 		a.playingBar.SetText("")
 		return

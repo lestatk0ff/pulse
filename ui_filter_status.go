@@ -41,8 +41,12 @@ func (a *app) setStatusTemporary(msg string, d time.Duration) {
 	}()
 }
 
-// applyFilter filters allFiles by a case-insensitive regexp and refreshes the table.
+// applyFilter filters the current list (files or radio stations) and refreshes the table.
 func (a *app) applyFilter(pattern string) {
+	if a.radioMode {
+		a.applyRadioFilter(pattern)
+		return
+	}
 	if pattern == "" {
 		a.files = a.allFiles
 		a.populateTable()
@@ -97,22 +101,31 @@ func (a *app) confirmFilter() {
 	a.statusPages.SwitchToPage("normal")
 	a.tv.SetFocus(a.table)
 	if text := a.searchBar.GetText(); text != "" {
+		total, shown := len(a.allFiles), len(a.files)
+		if a.radioMode {
+			total, shown = len(a.allStations), len(a.stations)
+		}
 		a.statusBar.SetText(fmt.Sprintf(
 			"[yellow]Filter:[white] %s  [grey](%d/%d)  Ctrl+F to edit, Esc to clear",
-			text, len(a.files), len(a.allFiles),
+			text, shown, total,
 		))
 	} else {
 		a.clearFilterStatusIfShown()
 	}
 }
 
-// exitFilter clears filter input/results and restores the full file list view.
+// exitFilter clears filter input/results and restores the full list view.
 func (a *app) exitFilter() {
 	a.stopFilterDebounce()
 	a.filterActive = false
 	a.searchBar.SetText("")
-	a.files = a.allFiles
-	a.populateTable()
+	if a.radioMode {
+		a.stations = a.allStations
+		a.populateRadioTable()
+	} else {
+		a.files = a.allFiles
+		a.populateTable()
+	}
 	a.clearFilterStatusIfShown()
 	a.statusPages.SwitchToPage("normal")
 	a.tv.SetFocus(a.table)

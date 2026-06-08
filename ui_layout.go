@@ -25,17 +25,22 @@ func newTUIApp(dir string, files []*AudioFile) *app {
 	if cfg.BorderStyle != "" {
 		borderStyle = cfg.BorderStyle
 	}
+	background := defaultBackground
+	if cfg.Background != nil {
+		background = *cfg.Background
+	}
 
 	a := &app{
-		tv:               tview.NewApplication(),
-		files:            files,
-		allFiles:         files,
-		dir:              dir,
-		playerBinary:     playerBinary,
-		playerBaseArgs:   playerBaseArgs,
-		volume:           volume,
-		colorPaletteName: colorPalette,
-		borderStyleName:  borderStyle,
+		tv:                tview.NewApplication(),
+		files:             files,
+		allFiles:          files,
+		dir:               dir,
+		playerBinary:      playerBinary,
+		playerBaseArgs:    playerBaseArgs,
+		volume:            volume,
+		colorPaletteName:  colorPalette,
+		borderStyleName:   borderStyle,
+		backgroundEnabled: background,
 	}
 	a.build()
 	return a
@@ -343,6 +348,62 @@ func (a *app) buildLayout() {
 	a.tv.SetRoot(a.rootPages, true).SetFocus(a.table)
 }
 
+// applyListBackground sets the background on a List including the baked-in text
+// styles that tview captures at NewList() time and would otherwise keep the old color.
+func applyListBackground(l *tview.List, bgColor tcell.Color) {
+	l.SetBackgroundColor(bgColor)
+	l.SetMainTextStyle(tcell.StyleDefault.Foreground(tview.Styles.PrimaryTextColor).Background(bgColor))
+	l.SetSecondaryTextStyle(tcell.StyleDefault.Foreground(tview.Styles.TertiaryTextColor).Background(bgColor))
+	l.SetShortcutStyle(tcell.StyleDefault.Foreground(tview.Styles.SecondaryTextColor).Background(bgColor))
+	// selectedStyle.Foreground is also baked-in from PrimitiveBackgroundColor. When that
+	// becomes ColorDefault the selected text blends into the selection background. Use an
+	// explicit black so the inversion is always visible.
+	selectedFg := bgColor
+	if selectedFg == tcell.ColorDefault {
+		selectedFg = tcell.ColorBlack
+	}
+	l.SetSelectedStyle(tcell.StyleDefault.Foreground(selectedFg).Background(tview.Styles.PrimaryTextColor))
+}
+
+// applyBackgroundColor propagates the current backgroundEnabled setting to every
+// widget and to the tview global style (so newly created overlays inherit it).
+func (a *app) applyBackgroundColor() {
+	bgColor := tcell.ColorBlack
+	if !a.backgroundEnabled {
+		bgColor = tcell.ColorDefault
+	}
+	tview.Styles.PrimitiveBackgroundColor = bgColor
+
+	a.detailsView.SetBackgroundColor(bgColor)
+	a.table.SetBackgroundColor(bgColor)
+	selectedFg := bgColor
+	if selectedFg == tcell.ColorDefault {
+		selectedFg = tcell.ColorBlack
+	}
+	a.table.SetSelectedStyle(tcell.StyleDefault.Foreground(selectedFg).Background(tview.Styles.PrimaryTextColor))
+	applyListBackground(a.actionList, bgColor)
+	a.statusBar.SetBackgroundColor(bgColor)
+	a.playingBar.SetBackgroundColor(bgColor)
+	a.hotkeysView.SetBackgroundColor(bgColor)
+	a.searchBar.SetBackgroundColor(bgColor)
+	a.detailsFrame.SetBackgroundColor(bgColor)
+	a.tableFrame.SetBackgroundColor(bgColor)
+	a.actionsFrame.SetBackgroundColor(bgColor)
+	a.hotkeysFrame.SetBackgroundColor(bgColor)
+	if a.configList != nil {
+		applyListBackground(a.configList, bgColor)
+	}
+	if a.themesList != nil {
+		applyListBackground(a.themesList, bgColor)
+	}
+	if a.themeColorsList != nil {
+		applyListBackground(a.themeColorsList, bgColor)
+	}
+	if a.borderStylesList != nil {
+		applyListBackground(a.borderStylesList, bgColor)
+	}
+}
+
 // applyTheme applies the selected color palette and border style to all UI frames.
 func (a *app) applyTheme() {
 	palette := colorPaletteByName(a.colorPaletteName)
@@ -351,6 +412,7 @@ func (a *app) applyTheme() {
 	a.borderStyleName = borderStyle.Name
 	applyGlobalBorderStyle(borderStyle)
 	a.applyTableHeaderTheme(palette.Name)
+	a.applyBackgroundColor()
 
 	a.detailsFrame.SetTitleColor(palette.DetailsFrameColor).SetBorderColor(palette.DetailsFrameColor).SetBorderAttributes(borderStyle.FrameAttributes)
 	a.tableFrame.SetTitleColor(palette.TableFrameColor).SetBorderColor(palette.TableFrameColor).SetBorderAttributes(borderStyle.FrameAttributes)

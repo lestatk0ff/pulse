@@ -108,7 +108,7 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 | `Tab`    | Switch focus between file table and action list                     |
 | `↑` / `↓` | Navigate files                                                    |
 | `Enter`  | Play selected file                                                  |
-| `C`      | Open Configuration overlay (themes, border styles)                  |
+| `C`      | Open Configuration overlay (themes, border styles, background)      |
 | `Z`      | Shuffle currently visible list                                      |
 | `S`      | Stop playback                                                       |
 | `M`      | Mute / unmute (restores previous volume on unmute)                  |
@@ -144,13 +144,15 @@ Only settings that differ from the built-in defaults are written, so the file st
 color_palette: Space
 border_style: Rounded
 volume: 65
+background: true
 ```
 
 | Key            | Default     | Description                                   |
 |----------------|-------------|-----------------------------------------------|
-| `color_palette`| `Default`   | Active color palette name (see `C` → Themes → Colors) |
-| `border_style` | `Classic`   | Active border style name (see `C` → Themes → Border)  |
-| `volume`       | `80`        | Playback volume (0–100)                        |
+| `color_palette`| `Default`   | Active color palette name (see `C` → Themes → Colors)     |
+| `border_style` | `Classic`   | Active border style name (see `C` → Themes → Border)      |
+| `volume`       | `80`        | Playback volume (0–100)                                    |
+| `background`   | `false`     | Fill terminal with a solid background (see `C` → Themes → Background) |
 
 Custom radio stations continue to be stored in `~/.config/pulse/radio.json` (JSON array).
 

@@ -269,6 +269,7 @@ func (a *app) adjustVolume(delta int) {
 		return
 	}
 	a.volume = newVolume
+	a.saveConfig()
 	if a.nowPlayingRadio != nil {
 		station := a.nowPlayingRadio
 		a.playRadio(station)

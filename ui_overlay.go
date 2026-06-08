@@ -76,6 +76,7 @@ func (a *app) populateThemeColorsList() {
 			a.colorPaletteName = nameCopy
 			a.applyTheme()
 			a.populateThemeColorsList()
+			a.saveConfig()
 			a.setStatusTemporary(fmt.Sprintf("[green]Color palette: %s", nameCopy), 2*time.Second)
 		})
 	}
@@ -92,6 +93,7 @@ func (a *app) populateBorderStylesList() {
 			a.borderStyleName = nameCopy
 			a.applyTheme()
 			a.populateBorderStylesList()
+			a.saveConfig()
 			a.setStatusTemporary(fmt.Sprintf("[green]Border style: %s", nameCopy), 2*time.Second)
 		})
 	}

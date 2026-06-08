@@ -11,6 +11,21 @@ import (
 func newTUIApp(dir string, files []*AudioFile) *app {
 	playerBinary, playerBaseArgs := findPlayer()
 
+	cfg := loadConfig()
+
+	volume := defaultVolume
+	if cfg.Volume != nil {
+		volume = *cfg.Volume
+	}
+	colorPalette := defaultColorPalette
+	if cfg.ColorPalette != "" {
+		colorPalette = cfg.ColorPalette
+	}
+	borderStyle := defaultBorderStyle
+	if cfg.BorderStyle != "" {
+		borderStyle = cfg.BorderStyle
+	}
+
 	a := &app{
 		tv:               tview.NewApplication(),
 		files:            files,
@@ -18,9 +33,9 @@ func newTUIApp(dir string, files []*AudioFile) *app {
 		dir:              dir,
 		playerBinary:     playerBinary,
 		playerBaseArgs:   playerBaseArgs,
-		volume:           80,
-		colorPaletteName: "Default",
-		borderStyleName:  "Classic",
+		volume:           volume,
+		colorPaletteName: colorPalette,
+		borderStyleName:  borderStyle,
 	}
 	a.build()
 	return a

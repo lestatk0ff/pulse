@@ -134,6 +134,26 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 | `R`          | Return to file browser                          |
 | `Esc`        | Close overlay / clear filter / quit             |
 
+## Configuration
+
+Pulse persists user preferences to `~/.config/pulse/config.yaml` (or `$XDG_CONFIG_HOME/pulse/config.yaml`). The file is created automatically the first time you change a setting and is read on every launch.
+
+Only settings that differ from the built-in defaults are written, so the file stays minimal. Example:
+
+```yaml
+color_palette: Space
+border_style: Rounded
+volume: 65
+```
+
+| Key            | Default     | Description                                   |
+|----------------|-------------|-----------------------------------------------|
+| `color_palette`| `Default`   | Active color palette name (see `C` → Themes → Colors) |
+| `border_style` | `Classic`   | Active border style name (see `C` → Themes → Border)  |
+| `volume`       | `80`        | Playback volume (0–100)                        |
+
+Custom radio stations continue to be stored in `~/.config/pulse/radio.json` (JSON array).
+
 ## Notes
 
 - Metadata is loaded lazily with `ffprobe` when a file is selected.

@@ -17,10 +17,11 @@ const (
 // Config holds user-overridden preferences. Only fields that differ from
 // defaults are written to disk, so the file stays minimal and readable.
 type Config struct {
-	ColorPalette string `yaml:"color_palette,omitempty"`
-	BorderStyle  string `yaml:"border_style,omitempty"`
-	Volume       *int   `yaml:"volume,omitempty"`
-	Background   *bool  `yaml:"background,omitempty"`
+	ColorPalette    string `yaml:"color_palette,omitempty"`
+	BorderStyle     string `yaml:"border_style,omitempty"`
+	Volume          *int   `yaml:"volume,omitempty"`
+	Background      *bool  `yaml:"background,omitempty"`
+	EqualizerPreset string `yaml:"equalizer_preset,omitempty"`
 }
 
 func configFilePath() string {
@@ -62,6 +63,9 @@ func (a *app) saveConfig() {
 	if a.backgroundEnabled {
 		v := true
 		out.Background = &v
+	}
+	if a.equalizerPreset != defaultEQPreset {
+		out.EqualizerPreset = a.equalizerPreset
 	}
 
 	path := configFilePath()

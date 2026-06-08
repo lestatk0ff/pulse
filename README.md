@@ -14,6 +14,7 @@ Terminal UI app (Go + tview) to scan a directory of audio files, inspect metadat
   - Convert selected file to `OGG/Vorbis`
 - Refresh action to re-scan files without restarting the app
 - Online radio browser with built-in stations and custom station support
+- Equalizer presets (Flat, Rock, Pop, Jazz, Classical, Bass Boost, Vocal) — selectable from the Configuration overlay
 
 ## MVP Requirements
 
@@ -108,7 +109,7 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 | `Tab`    | Switch focus between file table and action list                     |
 | `↑` / `↓` | Navigate files                                                    |
 | `Enter`  | Play selected file                                                  |
-| `C`      | Open Configuration overlay (themes, border styles, background)      |
+| `C`      | Open Configuration overlay (themes, border styles, background, equalizer) |
 | `Z`      | Shuffle currently visible list                                      |
 | `S`      | Stop playback                                                       |
 | `M`      | Mute / unmute (restores previous volume on unmute)                  |
@@ -145,14 +146,28 @@ color_palette: Space
 border_style: Rounded
 volume: 65
 background: true
+equalizer_preset: Jazz
 ```
 
-| Key            | Default     | Description                                   |
-|----------------|-------------|-----------------------------------------------|
-| `color_palette`| `Default`   | Active color palette name (see `C` → Themes → Colors)     |
-| `border_style` | `Classic`   | Active border style name (see `C` → Themes → Border)      |
-| `volume`       | `80`        | Playback volume (0–100)                                    |
-| `background`   | `false`     | Fill terminal with a solid background (see `C` → Themes → Background) |
+| Key                | Default  | Description                                                            |
+|--------------------|----------|------------------------------------------------------------------------|
+| `color_palette`    | `Default`| Active color palette name (see `C` → Themes → Colors)                 |
+| `border_style`     | `Classic`| Active border style name (see `C` → Themes → Border)                  |
+| `volume`           | `80`     | Playback volume (0–100)                                                |
+| `background`       | `false`  | Fill terminal with a solid background (see `C` → Themes → Background) |
+| `equalizer_preset` | `Rock`   | Active EQ preset name (see `C` → Equalizer)                           |
+
+### Equalizer presets
+
+| Preset       | Description                          |
+|--------------|--------------------------------------|
+| `Flat`       | No equalizer — original audio output |
+| `Rock`       | Punchy bass and crisp highs          |
+| `Pop`        | Boosted mids for a warm, present sound |
+| `Jazz`       | Warm lows and smooth highs           |
+| `Classical`  | Wide soundstage with natural tonality |
+| `Bass Boost` | Deep, powerful low frequencies       |
+| `Vocal`      | Enhanced vocals and speech clarity   |
 
 Custom radio stations continue to be stored in `~/.config/pulse/radio.json` (JSON array).
 

@@ -22,6 +22,9 @@ func (a *app) handleOverlayEscape() {
 	case "themes":
 		a.closeThemesOverlay()
 		return
+	case "equalizer":
+		a.closeEqualizerOverlay()
+		return
 	default:
 		a.closeConfigurationOverlay()
 	}
@@ -68,6 +71,81 @@ func (a *app) backgroundItemLabel() string {
 		return "Background  [green]■[-]"
 	}
 	return "Background  [red]□[-]"
+}
+
+func (a *app) eqOptionLabel(name string) string {
+	if a.equalizerPreset == name {
+		return name + " (current)"
+	}
+	return name
+}
+
+func (a *app) populateEqualizerList() {
+	if a.equalizerList == nil {
+		return
+	}
+	a.equalizerList.Clear()
+	for _, preset := range eqPresets {
+		p := preset
+		a.equalizerList.AddItem(a.eqOptionLabel(p.Name), p.Description, 0, func() {
+			a.equalizerPreset = p.Name
+			a.populateEqualizerList()
+			a.saveConfig()
+			a.setStatusTemporary(fmt.Sprintf("[green]Equalizer: %s", p.Name), 2*time.Second)
+			if a.nowPlayingRadio != nil {
+				station := a.nowPlayingRadio
+				a.playRadio(station)
+				return
+			}
+			if a.nowPlaying != nil {
+				resumeSeconds := int(time.Since(a.playStart).Seconds())
+				playing := a.nowPlaying
+				a.playFileFrom(playing, resumeSeconds)
+			}
+		})
+	}
+}
+
+func (a *app) openEqualizerOverlay() {
+	if !a.overlayOpen {
+		return
+	}
+
+	a.equalizerList = tview.NewList().ShowSecondaryText(true)
+	a.populateEqualizerList()
+	a.equalizerList.SetBorder(true).
+		SetTitle(" Equalizer (Esc to back) ").
+		SetTitleColor(tcell.ColorYellow).
+		SetBorderColor(tcell.ColorYellow)
+	a.equalizerList.SetDoneFunc(func() {
+		a.closeEqualizerOverlay()
+	})
+
+	centered := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(nil, 0, 1, false).
+		AddItem(
+			tview.NewFlex().SetDirection(tview.FlexColumn).
+				AddItem(nil, 0, 1, false).
+				AddItem(a.equalizerList, 52, 0, true).
+				AddItem(nil, 0, 1, false),
+			16, 0, true,
+		).
+		AddItem(nil, 0, 1, false)
+
+	a.rootPages.AddPage("equalizer", centered, true, true)
+	a.activeOverlay = "equalizer"
+	a.tv.SetFocus(a.equalizerList)
+	a.applyTheme()
+}
+
+func (a *app) closeEqualizerOverlay() {
+	a.rootPages.RemovePage("equalizer")
+	a.equalizerList = nil
+	a.activeOverlay = "configuration"
+	a.applyTheme()
+	if a.configList != nil {
+		a.tv.SetFocus(a.configList)
+	}
 }
 
 func (a *app) populateThemesList() {
@@ -129,14 +207,18 @@ func (a *app) openConfigurationOverlay() {
 	a.previousFocus = a.tv.GetFocus()
 	a.configList = tview.NewList().
 		ShowSecondaryText(false).
-		AddItem("Themes", "", 0, nil)
+		AddItem("Themes", "", 0, nil).
+		AddItem("Equalizer", "", 0, nil)
 	a.configList.SetBorder(true).
 		SetTitle(" Configuration (Esc to exit) ").
 		SetTitleColor(tcell.ColorYellow).
 		SetBorderColor(tcell.ColorYellow)
 	a.configList.SetSelectedFunc(func(idx int, _, _ string, _ rune) {
-		if idx == 0 {
+		switch idx {
+		case 0:
 			a.openThemesOverlay()
+		case 1:
+			a.openEqualizerOverlay()
 		}
 	})
 	a.configList.SetDoneFunc(func() {
@@ -151,7 +233,7 @@ func (a *app) openConfigurationOverlay() {
 				AddItem(nil, 0, 1, false).
 				AddItem(a.configList, 44, 0, true).
 				AddItem(nil, 0, 1, false),
-			10, 0, true,
+			12, 0, true,
 		).
 		AddItem(nil, 0, 1, false)
 
@@ -302,6 +384,7 @@ func (a *app) closeConfigurationOverlay() {
 	a.rootPages.RemovePage("theme-colors")
 	a.rootPages.RemovePage("theme-borders")
 	a.rootPages.RemovePage("themes")
+	a.rootPages.RemovePage("equalizer")
 	a.rootPages.RemovePage("configuration")
 	a.overlayOpen = false
 	a.activeOverlay = ""
@@ -309,6 +392,7 @@ func (a *app) closeConfigurationOverlay() {
 	a.themesList = nil
 	a.themeColorsList = nil
 	a.borderStylesList = nil
+	a.equalizerList = nil
 	a.applyTheme()
 	if a.previousFocus != nil {
 		a.tv.SetFocus(a.previousFocus)

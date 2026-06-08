@@ -61,6 +61,7 @@ type app struct {
 	themesList       *tview.List        // themes configuration menu with Colors/Border entries
 	themeColorsList  *tview.List        // color palette submenu list
 	borderStylesList *tview.List        // border style submenu list
+	equalizerList    *tview.List        // equalizer preset submenu list
 	files            []*AudioFile       // currently displayed files (may be a filtered subset)
 	allFiles         []*AudioFile       // full unfiltered list
 	filteredBuf      []*AudioFile       // reusable backing slice to reduce filter allocations
@@ -71,6 +72,7 @@ type app struct {
 	colorPaletteName  string             // selected color palette name
 	borderStyleName   string             // selected border style name
 	backgroundEnabled bool               // true when app draws a black background fill
+	equalizerPreset   string             // active EQ preset name
 	previousFocus    tview.Primitive    // focus owner before opening an overlay
 	dir              string             // the directory path passed on the command line
 	selectedFile     *AudioFile         // file currently highlighted in the table

@@ -48,6 +48,9 @@ func (a *app) playRadio(s *RadioStation) {
 		a.volume = 100
 	}
 	args = append(args, fmt.Sprintf("--volume=%d", a.volume))
+	if eqArg := findEQPreset(a.equalizerPreset).mpvArg(); eqArg != "" {
+		args = append(args, eqArg)
+	}
 
 	// mpv exposes a JSON IPC socket we can query for current ICY track title.
 	var socketPath string
@@ -245,6 +248,9 @@ func (a *app) playerCommandArgs(playerName string, playerArgs []string, path str
 		a.volume = 100
 	}
 	args = append(args, fmt.Sprintf("--volume=%d", a.volume))
+	if eqArg := findEQPreset(a.equalizerPreset).mpvArg(); eqArg != "" {
+		args = append(args, eqArg)
+	}
 	args = append(args, path)
 	return args
 }

@@ -11,6 +11,7 @@ const (
 	defaultColorPalette = "Default"
 	defaultBorderStyle  = "Classic"
 	defaultVolume       = 80
+	defaultBackground   = false
 )
 
 // Config holds user-overridden preferences. Only fields that differ from
@@ -19,6 +20,7 @@ type Config struct {
 	ColorPalette string `yaml:"color_palette,omitempty"`
 	BorderStyle  string `yaml:"border_style,omitempty"`
 	Volume       *int   `yaml:"volume,omitempty"`
+	Background   *bool  `yaml:"background,omitempty"`
 }
 
 func configFilePath() string {
@@ -56,6 +58,10 @@ func (a *app) saveConfig() {
 	if a.volume != defaultVolume {
 		v := a.volume
 		out.Volume = &v
+	}
+	if a.backgroundEnabled {
+		v := true
+		out.Background = &v
 	}
 
 	path := configFilePath()

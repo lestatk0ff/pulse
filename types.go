@@ -68,8 +68,9 @@ type app struct {
 	filterDebounce   *time.Timer        // coalesces rapid filter keystrokes into one apply
 	overlayOpen      bool               // true while a modal overlay page is visible
 	activeOverlay    string             // active overlay page name: "configuration", "themes", "theme-colors", "theme-borders", or ""
-	colorPaletteName string             // selected color palette name
-	borderStyleName  string             // selected border style name
+	colorPaletteName  string             // selected color palette name
+	borderStyleName   string             // selected border style name
+	backgroundEnabled bool               // true when app draws a black background fill
 	previousFocus    tview.Primitive    // focus owner before opening an overlay
 	dir              string             // the directory path passed on the command line
 	selectedFile     *AudioFile         // file currently highlighted in the table

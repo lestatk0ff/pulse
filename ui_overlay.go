@@ -56,6 +56,20 @@ func borderOptionDetails(name string) string {
 	}
 }
 
+func (a *app) backgroundStateLabel() string {
+	if a.backgroundEnabled {
+		return "on"
+	}
+	return "off"
+}
+
+func (a *app) backgroundItemLabel() string {
+	if a.backgroundEnabled {
+		return "Background  [green]■[-]"
+	}
+	return "Background  [red]□[-]"
+}
+
 func (a *app) populateThemesList() {
 	if a.themesList == nil {
 		return
@@ -63,6 +77,13 @@ func (a *app) populateThemesList() {
 	a.themesList.Clear()
 	a.themesList.AddItem("Colors", "Choose the active color palette", 0, func() { a.openThemeColorsOverlay() })
 	a.themesList.AddItem("Border", "Choose border glyph style", 0, func() { a.openBorderStylesOverlay() })
+	a.themesList.AddItem(a.backgroundItemLabel(), fmt.Sprintf("Terminal background fill (currently: %s)", a.backgroundStateLabel()), 0, func() {
+		a.backgroundEnabled = !a.backgroundEnabled
+		a.applyTheme()
+		a.populateThemesList()
+		a.saveConfig()
+		a.setStatusTemporary(fmt.Sprintf("[green]Background: %s", a.backgroundStateLabel()), 2*time.Second)
+	})
 }
 
 func (a *app) populateThemeColorsList() {
@@ -164,7 +185,7 @@ func (a *app) openThemesOverlay() {
 				AddItem(nil, 0, 1, false).
 				AddItem(a.themesList, 44, 0, true).
 				AddItem(nil, 0, 1, false),
-			10, 0, true,
+			12, 0, true,
 		).
 		AddItem(nil, 0, 1, false)
 

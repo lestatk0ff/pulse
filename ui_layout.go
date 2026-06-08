@@ -29,6 +29,10 @@ func newTUIApp(dir string, files []*AudioFile) *app {
 	if cfg.Background != nil {
 		background = *cfg.Background
 	}
+	eqPreset := defaultEQPreset
+	if cfg.EqualizerPreset != "" {
+		eqPreset = cfg.EqualizerPreset
+	}
 
 	a := &app{
 		tv:                tview.NewApplication(),
@@ -41,6 +45,7 @@ func newTUIApp(dir string, files []*AudioFile) *app {
 		colorPaletteName:  colorPalette,
 		borderStyleName:   borderStyle,
 		backgroundEnabled: background,
+		equalizerPreset:   eqPreset,
 	}
 	a.build()
 	return a

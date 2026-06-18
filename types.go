@@ -43,59 +43,61 @@ type AudioFile struct {
 
 // app is the root application struct that owns the TUI widgets and runtime state.
 type app struct {
-	tv               *tview.Application // tview event loop and screen manager
-	table            *tview.Table       // main file list widget (top-right panel)
-	detailsView      *tview.TextView    // file detail pane (top-left panel)
-	actionList       *tview.List        // action menu widget (bottom panel)
-	statusBar        *tview.TextView    // left portion of the status bar
-	playingBar       *tview.TextView    // right portion: now-playing indicator
-	hotkeysView      *tview.TextView    // hotkeys panel text
-	searchBar        *tview.InputField  // regexp filter input shown on Ctrl+F
-	statusPages      *tview.Pages       // switches between statusRow and searchBar
-	rootPages        *tview.Pages       // top-level pages for overlay screens above the main layout
-	detailsFrame     *tview.Flex        // bordered frame that wraps detailsView
-	tableFrame       *tview.Flex        // bordered frame that wraps the file table
-	actionsFrame     *tview.Flex        // bordered frame that wraps actionList
-	hotkeysFrame     *tview.Flex        // bordered frame that wraps hotkeysView
-	configList       *tview.List        // configuration menu shown when C is pressed
-	themesList       *tview.List        // themes configuration menu with Colors/Border entries
-	themeColorsList  *tview.List        // color palette submenu list
-	borderStylesList *tview.List        // border style submenu list
-	equalizerList    *tview.List        // equalizer preset submenu list
-	files            []*AudioFile       // currently displayed files (may be a filtered subset)
-	allFiles         []*AudioFile       // full unfiltered list
-	filteredBuf      []*AudioFile       // reusable backing slice to reduce filter allocations
-	filterActive     bool               // true while the filter input bar is visible
-	filterDebounce   *time.Timer        // coalesces rapid filter keystrokes into one apply
-	overlayOpen      bool               // true while a modal overlay page is visible
-	activeOverlay    string             // active overlay page name: "configuration", "themes", "theme-colors", "theme-borders", or ""
+	tv                *tview.Application // tview event loop and screen manager
+	table             *tview.Table       // main file list widget (top-right panel)
+	detailsView       *tview.TextView    // file detail pane (top-left panel)
+	actionList        *tview.List        // action menu widget (bottom panel)
+	statusBar         *tview.TextView    // left portion of the status bar
+	playingBar        *tview.TextView    // right portion: now-playing indicator
+	hotkeysView       *tview.TextView    // hotkeys panel text
+	searchBar         *tview.InputField  // regexp filter input shown on Ctrl+F
+	statusPages       *tview.Pages       // switches between statusRow and searchBar
+	rootPages         *tview.Pages       // top-level pages for overlay screens above the main layout
+	detailsFrame      *tview.Flex        // bordered frame that wraps detailsView
+	tableFrame        *tview.Flex        // bordered frame that wraps the file table
+	actionsFrame      *tview.Flex        // bordered frame that wraps actionList
+	hotkeysFrame      *tview.Flex        // bordered frame that wraps hotkeysView
+	bottomRow         *tview.Flex        // bottom row that holds hotkeys and actions frames
+	actionsVisible    bool               // true when the actions side panel is expanded
+	configList        *tview.List        // configuration menu shown when C is pressed
+	themesList        *tview.List        // themes configuration menu with Colors/Border entries
+	themeColorsList   *tview.List        // color palette submenu list
+	borderStylesList  *tview.List        // border style submenu list
+	equalizerList     *tview.List        // equalizer preset submenu list
+	files             []*AudioFile       // currently displayed files (may be a filtered subset)
+	allFiles          []*AudioFile       // full unfiltered list
+	filteredBuf       []*AudioFile       // reusable backing slice to reduce filter allocations
+	filterActive      bool               // true while the filter input bar is visible
+	filterDebounce    *time.Timer        // coalesces rapid filter keystrokes into one apply
+	overlayOpen       bool               // true while a modal overlay page is visible
+	activeOverlay     string             // active overlay page name: "configuration", "themes", "theme-colors", "theme-borders", or ""
 	colorPaletteName  string             // selected color palette name
 	borderStyleName   string             // selected border style name
 	backgroundEnabled bool               // true when app draws a black background fill
 	equalizerPreset   string             // active EQ preset name
-	previousFocus    tview.Primitive    // focus owner before opening an overlay
-	dir              string             // the directory path passed on the command line
-	selectedFile     *AudioFile         // file currently highlighted in the table
-	radioMode        bool               // true when showing the radio station browser
-	stations         []*RadioStation    // currently displayed stations (may be filtered)
-	allStations      []*RadioStation    // full station list (built-ins + custom)
-	radioFilterBuf   []*RadioStation    // reusable backing slice for radio filter
-	selectedStation  *RadioStation      // station currently highlighted in radio mode
-	nowPlayingRadio  *RadioStation      // station currently streaming; nil when a file is playing
-	radioTrack       string             // current ICY StreamTitle polled from mpv IPC ("Artist - Title")
-	mpvSocketPath    string             // path to the mpv IPC socket for the active radio stream
-	stopRadioPoller  chan struct{}       // closed to stop the radio track poller goroutine
-	currentPlay      *exec.Cmd          // running player process; nil when nothing is playing
-	nowPlaying       *AudioFile         // file currently being played; mirrors currentPlay
-	playerName       string             // name of the player binary used for the current track
-	playerBinary     string             // cached CLI player binary selected at startup
-	playerBaseArgs   []string           // cached base arguments for the selected CLI player
-	volume           int                // playback volume percent (0-100)
-	muted            bool               // true when output is muted via M toggle
-	volumeBeforeMute int                // volume snapshot to restore when unmuting
-	playStart        time.Time          // when the current track started
-	stopTicker       chan struct{}      // closed to stop the per-second position ticker
-	probeDebounce    *time.Timer        // delays ffprobe launch while cursor is moving quickly
-	probeRequestID   atomic.Int64       // monotonically increasing token to ignore stale probe results
-	statusNonce      atomic.Int64       // bumps on each status update; used to cancel delayed clears
+	previousFocus     tview.Primitive    // focus owner before opening an overlay
+	dir               string             // the directory path passed on the command line
+	selectedFile      *AudioFile         // file currently highlighted in the table
+	radioMode         bool               // true when showing the radio station browser
+	stations          []*RadioStation    // currently displayed stations (may be filtered)
+	allStations       []*RadioStation    // full station list (built-ins + custom)
+	radioFilterBuf    []*RadioStation    // reusable backing slice for radio filter
+	selectedStation   *RadioStation      // station currently highlighted in radio mode
+	nowPlayingRadio   *RadioStation      // station currently streaming; nil when a file is playing
+	radioTrack        string             // current ICY StreamTitle polled from mpv IPC ("Artist - Title")
+	mpvSocketPath     string             // path to the mpv IPC socket for the active radio stream
+	stopRadioPoller   chan struct{}      // closed to stop the radio track poller goroutine
+	currentPlay       *exec.Cmd          // running player process; nil when nothing is playing
+	nowPlaying        *AudioFile         // file currently being played; mirrors currentPlay
+	playerName        string             // name of the player binary used for the current track
+	playerBinary      string             // cached CLI player binary selected at startup
+	playerBaseArgs    []string           // cached base arguments for the selected CLI player
+	volume            int                // playback volume percent (0-100)
+	muted             bool               // true when output is muted via M toggle
+	volumeBeforeMute  int                // volume snapshot to restore when unmuting
+	playStart         time.Time          // when the current track started
+	stopTicker        chan struct{}      // closed to stop the per-second position ticker
+	probeDebounce     *time.Timer        // delays ffprobe launch while cursor is moving quickly
+	probeRequestID    atomic.Int64       // monotonically increasing token to ignore stale probe results
+	statusNonce       atomic.Int64       // bumps on each status update; used to cancel delayed clears
 }

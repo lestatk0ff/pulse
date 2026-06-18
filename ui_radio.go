@@ -61,8 +61,13 @@ func (a *app) updateHotkeys() {
 	}
 	var lines []string
 	if a.radioMode {
+		tabDesc := "Switch panel"
+		if !a.actionsVisible {
+			tabDesc = "Switch panel (Actions hidden)"
+		}
 		lines = []string{
-			line("Tab", "Switch panel"),
+			line("Tab", tabDesc),
+			line("Ctrl+P", "Show/hide Actions panel"),
 			line("C", "Configuration"),
 			line("↑↓", "Navigate"),
 			line("Enter", "Play station"),
@@ -76,8 +81,13 @@ func (a *app) updateHotkeys() {
 			line("Esc", "Quit"),
 		}
 	} else {
+		tabDesc := "Switch panel"
+		if !a.actionsVisible {
+			tabDesc = "Switch panel (Actions hidden)"
+		}
 		lines = []string{
-			line("Tab", "Switch panel"),
+			line("Tab", tabDesc),
+			line("Ctrl+P", "Show/hide Actions panel"),
 			line("C", "Configuration"),
 			line("↑↓", "Navigate"),
 			line("Enter", "Play"),

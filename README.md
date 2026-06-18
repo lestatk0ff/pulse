@@ -106,7 +106,8 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 
 | Key      | Action                                                              |
 |----------|---------------------------------------------------------------------|
-| `Tab`    | Switch focus between file table and action list                     |
+| `Tab`    | Switch focus between file table and action list (when Actions is visible) |
+| `Ctrl+P` | Show/hide the right-side Actions panel                              |
 | `↑` / `↓` | Navigate files                                                    |
 | `Enter`  | Play selected file                                                  |
 | `C`      | Open Configuration overlay (themes, border styles, background, equalizer) |
@@ -124,6 +125,7 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 
 | Key          | Action                                          |
 |--------------|-------------------------------------------------|
+| `Ctrl+P`     | Show/hide the right-side Actions panel          |
 | `↑` / `↓`   | Navigate stations                               |
 | `Enter`      | Connect and stream the selected station         |
 | `A`          | Open **Add Station** form (name + URL required) |

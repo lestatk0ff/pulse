@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
+
+const actionsPanelWidth = 36
 
 // newTUIApp creates and wires up the app struct but does not start the event loop.
 func newTUIApp(dir string, files []*AudioFile) *app {
@@ -258,9 +261,10 @@ func (a *app) buildLayout() {
 		SetTitleColor(tcell.ColorAqua).
 		SetBorderColor(tcell.ColorAqua)
 
-	bottomRow := tview.NewFlex().SetDirection(tview.FlexColumn).
-		AddItem(a.actionsFrame, 0, 1, false).
-		AddItem(a.hotkeysFrame, 32, 0, false)
+	a.actionsVisible = false
+	a.bottomRow = tview.NewFlex().SetDirection(tview.FlexColumn).
+		AddItem(a.hotkeysFrame, 0, 1, false).
+		AddItem(a.actionsFrame, 0, 0, false)
 
 	statusRow := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(a.playingBar, 1, 0, false).
@@ -272,7 +276,7 @@ func (a *app) buildLayout() {
 
 	root := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(topPanel, 0, 1, true).
-		AddItem(bottomRow, 0, 1, false).
+		AddItem(a.bottomRow, 0, 1, false).
 		AddItem(a.statusPages, 2, 0, false)
 
 	a.rootPages = tview.NewPages()
@@ -297,13 +301,16 @@ func (a *app) buildLayout() {
 				a.tv.SetFocus(a.searchBar)
 			}
 			return nil
+		case tcell.KeyCtrlP:
+			a.toggleActionsPanel()
+			return nil
 		case tcell.KeyTab:
 			if a.filterActive {
 				return ev
 			}
-			if a.table.HasFocus() {
+			if a.table.HasFocus() && a.actionsVisible {
 				a.tv.SetFocus(a.actionList)
-			} else {
+			} else if a.actionList.HasFocus() {
 				a.tv.SetFocus(a.table)
 			}
 			return nil
@@ -386,6 +393,26 @@ func (a *app) buildLayout() {
 	})
 
 	a.tv.SetRoot(a.rootPages, true).SetFocus(a.table)
+}
+
+// toggleActionsPanel shows/hides the right-side Actions panel.
+func (a *app) toggleActionsPanel() {
+	if a.bottomRow == nil || a.actionsFrame == nil {
+		return
+	}
+	a.actionsVisible = !a.actionsVisible
+	if a.actionsVisible {
+		a.bottomRow.ResizeItem(a.actionsFrame, actionsPanelWidth, 0)
+		a.setStatusTemporary("[green]Actions panel shown[white] (Ctrl+P to hide)", 2*time.Second)
+		a.tv.SetFocus(a.actionList)
+	} else {
+		a.bottomRow.ResizeItem(a.actionsFrame, 0, 0)
+		if a.actionList.HasFocus() {
+			a.tv.SetFocus(a.table)
+		}
+		a.setStatusTemporary("[yellow]Actions panel hidden[white] (Ctrl+P to show)", 2*time.Second)
+	}
+	a.updateHotkeys()
 }
 
 // applyListBackground sets the background on a List including the baked-in text

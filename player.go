@@ -10,7 +10,15 @@ import (
 	"time"
 )
 
-var mpvBaseArgs = []string{"--no-terminal", "--no-video"}
+// Keep a larger decode/audio buffer to avoid long-session underruns (stutter/crackle).
+var mpvBaseArgs = []string{
+	"--no-terminal",
+	"--no-video",
+	"--cache=yes",
+	"--cache-secs=20",
+	"--demuxer-readahead-secs=20",
+	"--audio-buffer=1.0",
+}
 
 // findPlayer returns "mpv" and its default args if mpv is on PATH, otherwise empty strings.
 func findPlayer() (string, []string) {
@@ -38,6 +46,8 @@ func (a *app) playRadio(s *RadioStation) {
 		a.currentPlay = nil
 	}
 	a.nowPlaying = nil
+	a.refreshPlayingRowHighlight()
+	a.updatePlayingBar()
 	a.stopRadioTrackPoller()
 
 	args := append([]string{}, playerArgs...)
@@ -77,6 +87,7 @@ func (a *app) playRadio(s *RadioStation) {
 	a.nowPlayingRadio = s
 	a.playerName = playerName
 	a.playStart = time.Now()
+	a.updatePlayingBar()
 	a.startPositionTicker()
 
 	if socketPath != "" {
@@ -190,12 +201,19 @@ func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 		return
 	}
 
+	// Switching from radio to file playback must always stop the ICY poller,
+	// otherwise stale poller goroutines keep running in the background.
+	a.stopRadioTrackPoller()
+
 	// Kill the current track before starting a new one.
 	if a.currentPlay != nil {
 		a.currentPlay.Process.Kill()
 		a.currentPlay = nil
 	}
 	a.nowPlayingRadio = nil
+	a.nowPlaying = nil
+	a.refreshPlayingRowHighlight()
+	a.updatePlayingBar()
 
 	args := a.playerCommandArgs(playerName, playerArgs, f.Path, startSeconds)
 	cmd := exec.Command(playerName, args...)
@@ -213,6 +231,8 @@ func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 	a.nowPlaying = f
 	a.playerName = playerName
 	a.playStart = time.Now().Add(-time.Duration(startSeconds) * time.Second)
+	a.refreshPlayingRowHighlight()
+	a.updatePlayingBar()
 	a.startPositionTicker()
 
 	// Wait in a goroutine so we can advance to the next track when this one ends naturally.
@@ -230,6 +250,8 @@ func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 				if err == nil {
 					a.advanceToNext(finished)
 				}
+				a.refreshPlayingRowHighlight()
+				a.updatePlayingBar()
 			}
 		})
 	}()
@@ -375,6 +397,8 @@ func (a *app) stopPlayback() {
 	a.playerName = ""
 	a.stopPositionTicker()
 	a.stopRadioTrackPoller()
+	a.refreshPlayingRowHighlight()
+	a.updatePlayingBar()
 }
 
 // startPositionTicker stops any running ticker and starts a new one that updates

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/rivo/tview"
 )
 
 const probeDebounceDelay = 140 * time.Millisecond
@@ -42,15 +40,10 @@ func (a *app) probeAndShowDetails(f *AudioFile) {
 			f.Tags = tags
 			f.Probed = true
 
-			bitrateStr := "N/A"
-			if f.Bitrate > 0 {
-				bitrateStr = fmt.Sprintf("%d kbps", f.Bitrate)
-			}
-			// Refresh table cells once lazy metadata is available.
+			// Rebuild the table row so metadata updates keep the playing marker/color in sync.
 			for row := 1; row <= len(a.files); row++ {
 				if a.files[row-1] == f {
-					a.table.SetCell(row, 2, tview.NewTableCell(" "+f.Format))
-					a.table.SetCell(row, 3, tview.NewTableCell(" "+bitrateStr))
+					a.setFileRow(row, f)
 					break
 				}
 			}

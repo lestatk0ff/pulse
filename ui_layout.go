@@ -122,6 +122,49 @@ func (a *app) applyTableHeaderTheme(name string) {
 	}
 }
 
+// fileDisplayName adds a marker so users can spot the currently playing track instantly.
+func (a *app) fileDisplayName(f *AudioFile) string {
+	if a.nowPlaying == f {
+		return " ▶ " + f.RelPath
+	}
+	return " " + f.RelPath
+}
+
+// setFileRow writes one file row and applies a visual accent when that row is the active track.
+func (a *app) setFileRow(row int, f *AudioFile) {
+	bitrateStr := "N/A"
+	if f.Bitrate > 0 {
+		bitrateStr = fmt.Sprintf("%d kbps", f.Bitrate)
+	}
+
+	nameCell := tview.NewTableCell(a.fileDisplayName(f))
+	sizeCell := tview.NewTableCell(" " + fmtSize(f.Size))
+	formatCell := tview.NewTableCell(" " + f.Format)
+	bitrateCell := tview.NewTableCell(" " + bitrateStr)
+
+	if a.nowPlaying == f {
+		nameCell.SetTextColor(tcell.ColorLightGreen).SetAttributes(tcell.AttrBold)
+		sizeCell.SetTextColor(tcell.ColorLightGreen)
+		formatCell.SetTextColor(tcell.ColorLightGreen)
+		bitrateCell.SetTextColor(tcell.ColorLightGreen)
+	}
+
+	a.table.SetCell(row, 0, nameCell)
+	a.table.SetCell(row, 1, sizeCell)
+	a.table.SetCell(row, 2, formatCell)
+	a.table.SetCell(row, 3, bitrateCell)
+}
+
+// refreshPlayingRowHighlight redraws visible rows so the playing marker/color stays accurate.
+func (a *app) refreshPlayingRowHighlight() {
+	if a.table == nil || a.radioMode {
+		return
+	}
+	for row, f := range a.files {
+		a.setFileRow(row+1, f)
+	}
+}
+
 // populateTable clears all data rows (keeping the header) and re-fills the table from a.files.
 func (a *app) populateTable() {
 	for a.table.GetRowCount() > 1 {
@@ -129,15 +172,7 @@ func (a *app) populateTable() {
 	}
 
 	for row, f := range a.files {
-		bitrateStr := "N/A"
-		if f.Bitrate > 0 {
-			bitrateStr = fmt.Sprintf("%d kbps", f.Bitrate)
-		}
-
-		a.table.SetCell(row+1, 0, tview.NewTableCell(" "+f.RelPath))
-		a.table.SetCell(row+1, 1, tview.NewTableCell(" "+fmtSize(f.Size)))
-		a.table.SetCell(row+1, 2, tview.NewTableCell(" "+f.Format))
-		a.table.SetCell(row+1, 3, tview.NewTableCell(" "+bitrateStr))
+		a.setFileRow(row+1, f)
 	}
 
 	if len(a.files) > 0 {

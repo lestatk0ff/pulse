@@ -6,10 +6,13 @@ import (
 	"strings"
 )
 
-// audioExts is the set of file extensions treated as audio files during scanning.
 var audioExts = map[string]bool{
-	".mp3": true, ".ogg": true, ".flac": true,
-	".wav": true, ".aac": true, ".m4a": true,
+	".mp3":  true,
+	".ogg":  true,
+	".flac": true,
+	".wav":  true,
+	".aac":  true,
+	".m4a":  true,
 }
 
 // scanDir recursively walks dir and returns an AudioFile for every recognised

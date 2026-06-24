@@ -98,9 +98,7 @@ func (a *app) populateEqualizerList() {
 				return
 			}
 			if a.nowPlaying != nil {
-				resumeSeconds := int(time.Since(a.playStart).Seconds())
-				playing := a.nowPlaying
-				a.playFileFrom(playing, resumeSeconds)
+				a.sendToFileMpv("set_property", "af", findEQPreset(a.equalizerPreset).afValue()) //nolint:errcheck
 			}
 		})
 	}

@@ -501,6 +501,10 @@ func (a *app) applyTheme() {
 
 // run starts the tview event loop and blocks until the app exits.
 func (a *app) run() error {
+	defer a.shutdownFilePlayer()
 	defer a.stopPlayback()
+	if a.playerBinary != "" {
+		a.startFilePlayer() //nolint:errcheck
+	}
 	return a.tv.Run()
 }

@@ -17,7 +17,7 @@ var mpvBaseArgs = []string{
 	"--cache=yes",
 	"--cache-secs=20",
 	"--demuxer-readahead-secs=20",
-	"--audio-buffer=1.0",
+	"--audio-buffer=2.0",
 }
 
 // findPlayer returns "mpv" and its default args if mpv is on PATH, otherwise empty strings.
@@ -45,7 +45,11 @@ func (a *app) playRadio(s *RadioStation) {
 		a.currentPlay.Process.Kill()
 		a.currentPlay = nil
 	}
-	a.nowPlaying = nil
+	if a.nowPlaying != nil {
+		a.sendToFileMpv("stop") //nolint:errcheck
+		a.nowPlaying = nil
+		a.stopPositionTicker()
+	}
 	a.refreshPlayingRowHighlight()
 	a.updatePlayingBar()
 	a.stopRadioTrackPoller()
@@ -193,19 +197,14 @@ func queryMpvTitle(socketPath string) string {
 	return ""
 }
 
-// playFileFrom starts playback from the given offset (in whole seconds).
+// playFileFrom loads a file into the persistent file-mode mpv via IPC.
 func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
-	playerName, playerArgs := a.playerBinary, a.playerBaseArgs
-	if playerName == "" {
+	if a.playerBinary == "" {
 		a.setStatus("[red]No player found — install mpv")
 		return
 	}
 
-	// Switching from radio to file playback must always stop the ICY poller,
-	// otherwise stale poller goroutines keep running in the background.
 	a.stopRadioTrackPoller()
-
-	// Kill the current track before starting a new one.
 	if a.currentPlay != nil {
 		a.currentPlay.Process.Kill()
 		a.currentPlay = nil
@@ -215,66 +214,179 @@ func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 	a.refreshPlayingRowHighlight()
 	a.updatePlayingBar()
 
-	args := a.playerCommandArgs(playerName, playerArgs, f.Path, startSeconds)
-	cmd := exec.Command(playerName, args...)
-	// Detach all stdio so the player doesn't interfere with the TUI.
-	cmd.Stdin = nil
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-
-	if err := cmd.Start(); err != nil {
-		a.setStatus(fmt.Sprintf("[red]Failed to start %s: %v", playerName, err))
+	if err := a.ensureFilePlayer(); err != nil {
+		a.setStatus(fmt.Sprintf("[red]Failed to start mpv: %v", err))
 		return
 	}
 
-	a.currentPlay = cmd
-	a.nowPlaying = f
-	a.playerName = playerName
-	a.playStart = time.Now().Add(-time.Duration(startSeconds) * time.Second)
-	a.refreshPlayingRowHighlight()
-	a.updatePlayingBar()
-	a.startPositionTicker()
-
-	// Wait in a goroutine so we can advance to the next track when this one ends naturally.
-	go func() {
-		err := cmd.Wait()
-		a.tv.QueueUpdateDraw(func() {
-			// Guard against a race where stopPlayback already replaced currentPlay.
-			if a.currentPlay == cmd {
-				a.currentPlay = nil
-				finished := a.nowPlaying
-				a.nowPlaying = nil
-				a.playerName = ""
-				a.stopPositionTicker()
-				// Only auto-advance when playback ended cleanly.
-				if err == nil {
-					a.advanceToNext(finished)
-				}
-				a.refreshPlayingRowHighlight()
-				a.updatePlayingBar()
-			}
-		})
-	}()
-}
-
-// playerCommandArgs adds common playback modifiers for supported players.
-func (a *app) playerCommandArgs(playerName string, playerArgs []string, path string, startSeconds int) []string {
-	args := append([]string{}, playerArgs...)
+	opts := ""
 	if startSeconds > 0 {
-		args = append(args, fmt.Sprintf("--start=%d", startSeconds))
+		opts = fmt.Sprintf("start=%d", startSeconds)
 	}
+	a.sendToFileMpv("loadfile", f.Path, "replace", opts) //nolint:errcheck
+
 	if a.volume < 0 {
 		a.volume = 0
 	}
 	if a.volume > 100 {
 		a.volume = 100
 	}
-	args = append(args, fmt.Sprintf("--volume=%d", a.volume))
-	if eqArg := findEQPreset(a.equalizerPreset).mpvArg(); eqArg != "" {
-		args = append(args, eqArg)
+	a.sendToFileMpv("set_property", "volume", a.volume)                             //nolint:errcheck
+	a.sendToFileMpv("set_property", "af", findEQPreset(a.equalizerPreset).afValue()) //nolint:errcheck
+
+	a.nowPlaying = f
+	a.playerName = a.playerBinary
+	a.playStart = time.Now().Add(-time.Duration(startSeconds) * time.Second)
+	a.refreshPlayingRowHighlight()
+	a.updatePlayingBar()
+	a.startPositionTicker()
+}
+
+// startFilePlayer starts a persistent mpv process in idle mode and begins listening for events.
+func (a *app) startFilePlayer() error {
+	socketPath := fmt.Sprintf("/tmp/pulse-file-%d.sock", os.Getpid())
+	os.Remove(socketPath)
+	a.filePlayerSocket = socketPath
+
+	args := append([]string{}, a.playerBaseArgs...)
+	args = append(args, "--idle=yes", "--input-ipc-server="+socketPath)
+	cmd := exec.Command(a.playerBinary, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
+	if err := cmd.Start(); err != nil {
+		return err
 	}
-	args = append(args, path)
-	return args
+	a.filePlayer = cmd
+	a.startFileEventListener()
+	return nil
+}
+
+// ensureFilePlayer starts the file-mode mpv if it is not already running.
+func (a *app) ensureFilePlayer() error {
+	if a.isFilePlayerRunning() {
+		return nil
+	}
+	a.stopFileEventListener()
+	if a.filePlayer != nil && a.filePlayer.Process != nil {
+		a.filePlayer.Process.Kill()
+		a.filePlayer.Wait() //nolint:errcheck
+		a.filePlayer = nil
+	}
+	if err := a.startFilePlayer(); err != nil {
+		return err
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if a.isFilePlayerRunning() {
+			return nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return fmt.Errorf("mpv IPC socket not ready")
+}
+
+// isFilePlayerRunning returns true when the file-mode mpv IPC socket is reachable.
+func (a *app) isFilePlayerRunning() bool {
+	if a.filePlayerSocket == "" {
+		return false
+	}
+	conn, err := net.Dial("unix", a.filePlayerSocket)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
+}
+
+// sendToFileMpv sends a single JSON IPC command to the file-mode mpv process.
+func (a *app) sendToFileMpv(args ...interface{}) error {
+	conn, err := net.Dial("unix", a.filePlayerSocket)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(2 * time.Second)) //nolint:errcheck
+	data, _ := json.Marshal(map[string]interface{}{"command": args})
+	_, err = fmt.Fprintf(conn, "%s\n", data)
+	return err
+}
+
+// startFileEventListener starts a goroutine that reads MPV events and triggers auto-advance on eof.
+func (a *app) startFileEventListener() {
+	ch := make(chan struct{})
+	a.stopFileEvents = ch
+	socketPath := a.filePlayerSocket
+
+	go func() {
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			if _, err := os.Stat(socketPath); err == nil {
+				break
+			}
+			select {
+			case <-ch:
+				return
+			case <-time.After(50 * time.Millisecond):
+			}
+		}
+
+		conn, err := net.Dial("unix", socketPath)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		go func() {
+			<-ch
+			conn.Close()
+		}()
+
+		type mpvEvent struct {
+			Event  string `json:"event"`
+			Reason string `json:"reason"`
+		}
+		scanner := bufio.NewScanner(conn)
+		for scanner.Scan() {
+			var ev mpvEvent
+			if json.Unmarshal(scanner.Bytes(), &ev) != nil {
+				continue
+			}
+			if ev.Event == "end-file" && ev.Reason == "eof" {
+				a.tv.QueueUpdateDraw(func() {
+					if a.nowPlaying != nil {
+						finished := a.nowPlaying
+						a.nowPlaying = nil
+						a.playerName = ""
+						a.stopPositionTicker()
+						a.refreshPlayingRowHighlight()
+						a.updatePlayingBar()
+						a.advanceToNext(finished)
+					}
+				})
+			}
+		}
+	}()
+}
+
+// stopFileEventListener stops the file event listener goroutine.
+func (a *app) stopFileEventListener() {
+	if a.stopFileEvents != nil {
+		close(a.stopFileEvents)
+		a.stopFileEvents = nil
+	}
+}
+
+// shutdownFilePlayer stops the event listener and kills the persistent mpv process.
+func (a *app) shutdownFilePlayer() {
+	a.stopFileEventListener()
+	if a.filePlayer != nil && a.filePlayer.Process != nil {
+		a.filePlayer.Process.Kill()
+		a.filePlayer.Wait() //nolint:errcheck
+		a.filePlayer = nil
+	}
+	if a.filePlayerSocket != "" {
+		os.Remove(a.filePlayerSocket)
+		a.filePlayerSocket = ""
+	}
 }
 
 func (a *app) adjustVolume(delta int) {
@@ -308,11 +420,7 @@ func (a *app) adjustVolume(delta int) {
 		a.setStatusTemporary(fmt.Sprintf("[green]Volume set:[white] %d%%", a.volume), 3*time.Second)
 		return
 	}
-	// This app controls external CLI players (not embedded audio APIs), so volume
-	// changes are applied by restarting playback at the current elapsed position.
-	resumeSeconds := int(time.Since(a.playStart).Seconds())
-	playing := a.nowPlaying
-	a.playFileFrom(playing, resumeSeconds)
+	a.sendToFileMpv("set_property", "volume", a.volume) //nolint:errcheck
 	a.setStatusTemporary(fmt.Sprintf("[green]Volume:[white] %d%%", a.volume), 3*time.Second)
 }
 
@@ -338,10 +446,7 @@ func (a *app) toggleMute() {
 			a.setStatusTemporary(fmt.Sprintf("[green]Unmuted:[white] %d%%", a.volume), 3*time.Second)
 			return
 		}
-		// Apply restored volume immediately by restarting from current playback time.
-		resumeSeconds := int(time.Since(a.playStart).Seconds())
-		playing := a.nowPlaying
-		a.playFileFrom(playing, resumeSeconds)
+		a.sendToFileMpv("set_property", "volume", a.volume) //nolint:errcheck
 		a.setStatusTemporary(fmt.Sprintf("[green]Unmuted:[white] %d%%", a.volume), 3*time.Second)
 		return
 	}
@@ -360,9 +465,7 @@ func (a *app) toggleMute() {
 		a.setStatusTemporary("[yellow]Muted", 3*time.Second)
 		return
 	}
-	resumeSeconds := int(time.Since(a.playStart).Seconds())
-	playing := a.nowPlaying
-	a.playFileFrom(playing, resumeSeconds)
+	a.sendToFileMpv("set_property", "volume", 0) //nolint:errcheck
 	a.setStatusTemporary("[yellow]Muted", 3*time.Second)
 }
 
@@ -383,22 +486,30 @@ func (a *app) advanceToNext(finished *AudioFile) {
 	}
 }
 
-// stopPlayback kills the currently playing process, if any.
+// stopPlayback stops the currently playing file or radio stream.
 func (a *app) stopPlayback() {
-	if a.currentPlay == nil {
-		a.setStatus("[grey]Nothing is playing")
+	if a.nowPlaying != nil {
+		a.sendToFileMpv("stop") //nolint:errcheck
+		a.nowPlaying = nil
+		a.playerName = ""
+		a.stopPositionTicker()
+		a.refreshPlayingRowHighlight()
+		a.updatePlayingBar()
 		return
 	}
-	a.currentPlay.Process.Kill()
-	a.currentPlay.Wait()
-	a.currentPlay = nil
-	a.nowPlaying = nil
-	a.nowPlayingRadio = nil
-	a.playerName = ""
-	a.stopPositionTicker()
-	a.stopRadioTrackPoller()
-	a.refreshPlayingRowHighlight()
-	a.updatePlayingBar()
+	if a.currentPlay != nil {
+		a.currentPlay.Process.Kill()
+		a.currentPlay.Wait() //nolint:errcheck
+		a.currentPlay = nil
+		a.nowPlayingRadio = nil
+		a.playerName = ""
+		a.stopPositionTicker()
+		a.stopRadioTrackPoller()
+		a.refreshPlayingRowHighlight()
+		a.updatePlayingBar()
+		return
+	}
+	a.setStatus("[grey]Nothing is playing")
 }
 
 // startPositionTicker stops any running ticker and starts a new one that updates

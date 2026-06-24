@@ -85,17 +85,21 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 
 ## Code Layout
 
+- Single-module, flat layout: all Go source files in the repo root are in `package main`.
+
 - `main.go`: CLI argument validation and app bootstrap.
-- `types.go`: shared state structs (`app`, `AudioFile`, `RadioStation`, ffprobe JSON types).
+- `types.go`: shared state structs (`app`, `AudioFile`, ffprobe JSON types).
+- `config.go`: config defaults, load helpers, and persistence for user settings (`config.yaml`).
 - `ui_layout.go`: main layout and keyboard wiring.
 - `ui_overlay.go`: configuration and theme overlay flow.
 - `ui_details.go`: lazy probe rendering and details/now-playing view updates.
 - `ui_filter_status.go`: filter lifecycle and status message helpers.
 - `ui_radio.go`: radio mode UI — station table, details pane, add/delete overlays, filter.
-- `radio.go`: built-in station list, custom station persistence (`radio.json`).
+- `radio.go`: `RadioStation` model, built-in station list, and custom station persistence (`radio.json`).
 - `themes.go`: built-in frame/table-header theme definitions.
 - `scanner.go`: recursive audio file discovery.
 - `media_probe.go`: `ffprobe` metadata extraction for a selected file.
+- `equalizer.go`: EQ preset definitions and mpv superequalizer argument generation.
 - `player.go`: mpv integration for file playback and radio streaming.
 - `actions.go`: conversion/shuffle/refresh action handlers.
 - `helpers.go`: small formatting/string helpers.

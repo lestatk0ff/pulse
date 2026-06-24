@@ -87,7 +87,10 @@ type app struct {
 	radioTrack        string             // current ICY StreamTitle polled from mpv IPC ("Artist - Title")
 	mpvSocketPath     string             // path to the mpv IPC socket for the active radio stream
 	stopRadioPoller   chan struct{}      // closed to stop the radio track poller goroutine
-	currentPlay       *exec.Cmd          // running player process; nil when nothing is playing
+	filePlayer        *exec.Cmd          // persistent mpv process for file playback (idle when no song is loaded)
+	filePlayerSocket  string             // IPC socket path for the file-mode mpv
+	stopFileEvents    chan struct{}      // closed to stop the file event listener goroutine
+	currentPlay       *exec.Cmd          // running player process for radio; nil when radio is not streaming
 	nowPlaying        *AudioFile         // file currently being played; mirrors currentPlay
 	playerName        string             // name of the player binary used for the current track
 	playerBinary      string             // cached CLI player binary selected at startup

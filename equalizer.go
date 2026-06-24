@@ -56,6 +56,19 @@ func findEQPreset(name string) *EQPreset {
 	return &eqPresets[0]
 }
 
+// afValue returns the bare lavfi filter string used for IPC set_property af.
+// Returns empty string for the Flat preset (no filter).
+func (p *EQPreset) afValue() string {
+	if p.Name == "Flat" || p.Name == "" {
+		return ""
+	}
+	parts := make([]string, 18)
+	for i, db := range p.GainsDB {
+		parts[i] = fmt.Sprintf("%db=%.3f", i+1, math.Pow(10, db/20.0))
+	}
+	return "lavfi=[superequalizer=" + strings.Join(parts, ":") + "]"
+}
+
 // mpvArg returns the --af argument for mpv using lavfi superequalizer.
 // superequalizer expects linear gain values in [0, 20] where 1.0 = unity.
 func (p *EQPreset) mpvArg() string {

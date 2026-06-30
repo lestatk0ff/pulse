@@ -116,6 +116,7 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 | `Enter`  | Play selected file                                                  |
 | `C`      | Open Configuration overlay (themes, border styles, background, equalizer) |
 | `Z`      | Shuffle currently visible list                                      |
+| `P`      | Pause / resume playback                                             |
 | `S`      | Stop playback                                                       |
 | `M`      | Mute / unmute (restores previous volume on unmute)                  |
 | `+`      | Increase volume by 5%                                               |
@@ -134,6 +135,7 @@ Select a custom station (cyan text) and press `D` or `Delete`. Built-in stations
 | `Enter`      | Connect and stream the selected station         |
 | `A`          | Open **Add Station** form (name + URL required) |
 | `D` / `Del`  | Delete selected custom station                  |
+| `P`          | Pause / resume stream                           |
 | `S`          | Stop stream                                     |
 | `M`          | Mute / unmute                                   |
 | `+` / `-`    | Volume up / down                                |

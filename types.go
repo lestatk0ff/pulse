@@ -99,6 +99,8 @@ type app struct {
 	muted             bool               // true when output is muted via M toggle
 	volumeBeforeMute  int                // volume snapshot to restore when unmuting
 	playStart         time.Time          // when the current track started
+	paused            bool               // true while playback is paused
+	pausedAt          time.Time          // when the current pause started (used to adjust playStart on resume)
 	stopTicker        chan struct{}      // closed to stop the per-second position ticker
 	probeDebounce     *time.Timer        // delays ffprobe launch while cursor is moving quickly
 	probeRequestID    atomic.Int64       // monotonically increasing token to ignore stale probe results

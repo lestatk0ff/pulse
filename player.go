@@ -17,7 +17,8 @@ var mpvBaseArgs = []string{
 	"--cache=yes",
 	"--cache-secs=20",
 	"--demuxer-readahead-secs=20",
-	"--audio-buffer=2.0",
+	"--audio-buffer=5.0",
+	"--cache-pause=no",
 }
 
 // findPlayer returns "mpv" and its default args if mpv is on PATH, otherwise empty strings.
@@ -50,6 +51,7 @@ func (a *app) playRadio(s *RadioStation) {
 		a.nowPlaying = nil
 		a.stopPositionTicker()
 	}
+	a.paused = false
 	a.refreshPlayingRowHighlight()
 	a.updatePlayingBar()
 	a.stopRadioTrackPoller()
@@ -211,6 +213,7 @@ func (a *app) playFileFrom(f *AudioFile, startSeconds int) {
 	}
 	a.nowPlayingRadio = nil
 	a.nowPlaying = nil
+	a.paused = false
 	a.refreshPlayingRowHighlight()
 	a.updatePlayingBar()
 
@@ -297,9 +300,9 @@ func (a *app) isFilePlayerRunning() bool {
 	return true
 }
 
-// sendToFileMpv sends a single JSON IPC command to the file-mode mpv process.
-func (a *app) sendToFileMpv(args ...interface{}) error {
-	conn, err := net.Dial("unix", a.filePlayerSocket)
+// sendToMpvSocket sends a single JSON IPC command to an mpv process via its Unix socket.
+func sendToMpvSocket(socketPath string, args ...interface{}) error {
+	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		return err
 	}
@@ -308,6 +311,11 @@ func (a *app) sendToFileMpv(args ...interface{}) error {
 	data, _ := json.Marshal(map[string]interface{}{"command": args})
 	_, err = fmt.Fprintf(conn, "%s\n", data)
 	return err
+}
+
+// sendToFileMpv sends a single JSON IPC command to the file-mode mpv process.
+func (a *app) sendToFileMpv(args ...interface{}) error {
+	return sendToMpvSocket(a.filePlayerSocket, args...)
 }
 
 // startFileEventListener starts a goroutine that reads MPV events and triggers auto-advance on eof.
@@ -469,6 +477,34 @@ func (a *app) toggleMute() {
 	a.setStatusTemporary("[yellow]Muted", 3*time.Second)
 }
 
+// togglePause pauses or resumes the current playback via mpv's cycle pause command.
+func (a *app) togglePause() {
+	if a.nowPlaying == nil && a.nowPlayingRadio == nil {
+		a.setStatus("[grey]Nothing is playing")
+		return
+	}
+	if a.paused {
+		a.playStart = a.playStart.Add(time.Since(a.pausedAt))
+		a.paused = false
+		if a.nowPlaying != nil {
+			a.sendToFileMpv("cycle", "pause") //nolint:errcheck
+		} else {
+			sendToMpvSocket(a.mpvSocketPath, "cycle", "pause") //nolint:errcheck
+		}
+		a.startPositionTicker()
+	} else {
+		a.pausedAt = time.Now()
+		a.paused = true
+		if a.nowPlaying != nil {
+			a.sendToFileMpv("cycle", "pause") //nolint:errcheck
+		} else {
+			sendToMpvSocket(a.mpvSocketPath, "cycle", "pause") //nolint:errcheck
+		}
+		a.stopPositionTicker()
+	}
+	a.updatePlayingBar()
+}
+
 // advanceToNext plays the file after finished in the current list, or clears state if at the end.
 func (a *app) advanceToNext(finished *AudioFile) {
 	for i, f := range a.files {
@@ -492,6 +528,7 @@ func (a *app) stopPlayback() {
 		a.sendToFileMpv("stop") //nolint:errcheck
 		a.nowPlaying = nil
 		a.playerName = ""
+		a.paused = false
 		a.stopPositionTicker()
 		a.refreshPlayingRowHighlight()
 		a.updatePlayingBar()
@@ -503,6 +540,7 @@ func (a *app) stopPlayback() {
 		a.currentPlay = nil
 		a.nowPlayingRadio = nil
 		a.playerName = ""
+		a.paused = false
 		a.stopPositionTicker()
 		a.stopRadioTrackPoller()
 		a.refreshPlayingRowHighlight()

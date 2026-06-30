@@ -110,7 +110,11 @@ func (a *app) updatePlayingBar() {
 		if a.muted {
 			vol = "MUTED"
 		}
-		stationPart := fmt.Sprintf("[green]▶ Radio:[white] %s", a.nowPlayingRadio.Name)
+		radioIcon := "[green]▶ Radio:"
+		if a.paused {
+			radioIcon = "[yellow]⏸ Radio:"
+		}
+		stationPart := fmt.Sprintf("%s[white] %s", radioIcon, a.nowPlayingRadio.Name)
 		if a.radioTrack != "" {
 			stationPart += fmt.Sprintf("  [grey]♪ %s", a.radioTrack)
 		}
@@ -138,8 +142,12 @@ func (a *app) updatePlayingBar() {
 	if a.muted {
 		vol = "MUTED"
 	}
+	playIcon := "[green]▶ Playing:"
+	if a.paused {
+		playIcon = "[yellow]⏸ Paused:"
+	}
 	a.playingBar.SetText(fmt.Sprintf(
-		"[yellow]%s[white]  [green]▶ Playing:[white] %s  [gray]%s / %s  [aqua]Vol:[white] %s  ",
-		a.playerName, track, elapsedStr, a.nowPlaying.Duration, vol,
+		"[yellow]%s[white]  %s[white] %s  [gray]%s / %s  [aqua]Vol:[white] %s  ",
+		a.playerName, playIcon, track, elapsedStr, a.nowPlaying.Duration, vol,
 	))
 }

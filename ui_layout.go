@@ -365,6 +365,9 @@ func (a *app) buildLayout() {
 			case '2':
 				a.runAction(1)
 				return nil
+			case 'p', 'P':
+				a.togglePause()
+				return nil
 			case 's', 'S':
 				a.stopPlayback()
 				return nil

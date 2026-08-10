@@ -11,7 +11,7 @@ import (
 
 // runAction dispatches the action list item at idx to the appropriate handler.
 // idx matches the order items were added in buildActions
-// (0=convertBitrate, 1=convertOGG, 2=shuffleCurrentList, 3=refresh).
+// (0=convertFLACtoMP3, 1=shuffleCurrentList, 2=refresh).
 func (a *app) runAction(idx int) {
 	if a.radioMode {
 		return
@@ -22,12 +22,10 @@ func (a *app) runAction(idx int) {
 	}
 	switch idx {
 	case 0:
-		a.convertBitrate(a.selectedFile)
+		a.convertFLACtoMP3(a.selectedFile)
 	case 1:
-		a.convertOGG(a.selectedFile)
-	case 2:
 		a.shuffleCurrentList()
-	case 3:
+	case 2:
 		a.refresh()
 	}
 }
@@ -65,40 +63,20 @@ func (a *app) shuffleCurrentList() {
 	a.setStatusTemporary(fmt.Sprintf("[green]Shuffled:[white] %d song(s)", len(a.files)), 3*time.Second)
 }
 
-// convertBitrate re-encodes f to 192 kbps using ffmpeg, writing <name>_192k.<ext>
-// next to the original file. The conversion runs in a goroutine to avoid blocking the UI.
-func (a *app) convertBitrate(f *AudioFile) {
-	ext := filepath.Ext(f.Path)
-	outPath := strings.TrimSuffix(f.Path, ext) + "_192k" + ext
-
-	a.setStatus(fmt.Sprintf("[yellow]Converting [white]%s[yellow] → 192 kbps…", f.Name))
-
-	go func() {
-		cmd := exec.Command("ffmpeg", "-i", f.Path, "-b:a", "192k", "-y", outPath)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			a.setStatusAsync(fmt.Sprintf("[red]Error: %s", firstLine(string(out))))
-		} else {
-			a.setStatusAsync(fmt.Sprintf("[green]Done:[white] %s", filepath.Base(outPath)))
-		}
-	}()
-}
-
-// convertOGG re-encodes f to OGG/Vorbis (quality 4) using ffmpeg.
-// If the source is already .ogg the output is named <name>_converted.ogg to avoid
-// overwriting the original. Runs in a goroutine to avoid blocking the UI.
-func (a *app) convertOGG(f *AudioFile) {
-	base := strings.TrimSuffix(f.Path, filepath.Ext(f.Path))
-	outPath := base + ".ogg"
-	if outPath == f.Path {
-		outPath = base + "_converted.ogg"
+// convertFLACtoMP3 re-encodes a FLAC file to MP3 320 kbps using the LAME encoder,
+// writing <name>.mp3 next to the original. The conversion runs in a goroutine to avoid
+// blocking the UI.
+func (a *app) convertFLACtoMP3(f *AudioFile) {
+	if strings.ToLower(filepath.Ext(f.Path)) != ".flac" {
+		a.setStatus("[red]Action requires a .flac file — select a FLAC track first.")
+		return
 	}
+	outPath := strings.TrimSuffix(f.Path, filepath.Ext(f.Path)) + ".mp3"
 
-	a.setStatus(fmt.Sprintf("[yellow]Converting [white]%s[yellow] → OGG…", f.Name))
+	a.setStatus(fmt.Sprintf("[yellow]Converting [white]%s[yellow] → MP3 VBR V0…", f.Name))
 
 	go func() {
-		cmd := exec.Command("ffmpeg", "-i", f.Path, "-c:a", "libvorbis", "-q:a", "4", "-y", outPath)
-		out, err := cmd.CombinedOutput()
+		out, err := flacToMP3Cmd(f.Path, outPath).CombinedOutput()
 		if err != nil {
 			a.setStatusAsync(fmt.Sprintf("[red]Error: %s", firstLine(string(out))))
 		} else {
@@ -129,4 +107,20 @@ func (a *app) refresh() {
 			a.setStatus(fmt.Sprintf("[green]Refreshed:[white] %d file(s) found", len(files)))
 		})
 	}()
+}
+
+// flacToMP3Cmd builds the ffmpeg command for FLAC → MP3 VBR V0 conversion.
+// Shared by the TUI action and the CLI encode subcommand.
+func flacToMP3Cmd(inPath, outPath string) *exec.Cmd {
+	return exec.Command("ffmpeg",
+		"-i", inPath,
+		"-map", "0:a",
+		"-map", "0:v?",            // cover art — skipped if absent
+		"-c:a", "libmp3lame",
+		"-q:a", "0",               // VBR V0 ~245 kbps avg
+		"-compression_level", "0", // LAME -q 0: best psychoacoustic model
+		"-c:v", "copy",
+		"-id3v2_version", "3",
+		"-y", outPath,
+	)
 }

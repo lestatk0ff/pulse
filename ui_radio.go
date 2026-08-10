@@ -57,46 +57,54 @@ func (a *app) exitRadioMode() {
 
 func (a *app) updateHotkeys() {
 	line := func(key, desc string) string {
-		return fmt.Sprintf("[lightyellow]%-6s[white] [gray]- %s", key, desc)
+		return fmt.Sprintf("  [lightyellow]%-7s[white] %s", key, desc)
 	}
+	sec := func(name string) string {
+		return "[grey]── [yellow]" + name + "[white]"
+	}
+
 	var lines []string
 	if a.radioMode {
-		tabDesc := "Switch panel"
-		if !a.actionsVisible {
-			tabDesc = "Switch panel (Actions hidden)"
-		}
 		lines = []string{
-			line("Tab", tabDesc),
-			line("Ctrl+P", "Show/hide Actions panel"),
-			line("C", "Configuration"),
-			line("↑↓", "Navigate"),
+			sec("Playback"),
 			line("Enter", "Play station"),
+			line("P", "Pause / resume"),
+			line("S", "Stop"),
+			line("M", "Mute toggle"),
+			line("+/-", "Volume"),
+			"",
+			sec("Navigation"),
+			line("↑↓", "Navigate"),
+			line("Tab", "Switch panel"),
+			line("Ctrl+F", "Filter"),
+			"",
+			sec("App"),
 			line("A", "Add station"),
 			line("D", "Delete custom"),
-			line("S", "Stop"),
-			line("M", "Mute/unmute"),
-			line("+/-", "Volume up/down"),
-			line("Ctrl+F", "Filter"),
+			line("C", "Configuration"),
 			line("R", "File browser"),
+			line("Ctrl+P", "Actions panel"),
 			line("Esc", "Quit"),
 		}
 	} else {
-		tabDesc := "Switch panel"
-		if !a.actionsVisible {
-			tabDesc = "Switch panel (Actions hidden)"
-		}
 		lines = []string{
-			line("Tab", tabDesc),
-			line("Ctrl+P", "Show/hide Actions panel"),
-			line("C", "Configuration"),
-			line("↑↓", "Navigate"),
+			sec("Playback"),
 			line("Enter", "Play"),
-			line("Z", "Shuffle list"),
+			line("P", "Pause / resume"),
 			line("S", "Stop"),
-			line("M", "Mute/unmute"),
-			line("+/-", "Volume up/down"),
+			line("M", "Mute toggle"),
+			line("+/-", "Volume"),
+			"",
+			sec("Navigation"),
+			line("↑↓", "Navigate"),
+			line("Tab", "Switch panel"),
 			line("Ctrl+F", "Filter"),
-			line("R", "Radio"),
+			"",
+			sec("App"),
+			line("C", "Configuration"),
+			line("Z", "Shuffle"),
+			line("R", "Radio mode"),
+			line("Ctrl+P", "Actions panel"),
 			line("F5", "Refresh"),
 			line("Esc", "Quit"),
 		}

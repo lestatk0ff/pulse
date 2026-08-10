@@ -7,7 +7,36 @@ import (
 	"syscall"
 )
 
+const usage = `Pulse — terminal music player
+
+Usage:
+  pulse [DIR]           Launch the TUI player.
+                        DIR is optional; if omitted the player starts without
+                        a file list and you can navigate later.
+
+  pulse encode -d DIR   Batch-convert every FLAC file found recursively in DIR
+                        to MP3 (VBR V0, ~245 kbps, LAME encoder).
+                        Each output file is written next to its source:
+                          /music/album/track.flac → /music/album/track.mp3
+                        Existing .mp3 files are overwritten without prompting.
+
+  pulse -h, --help      Show this message.
+
+Runtime dependencies (must be in PATH): mpv, ffmpeg, ffprobe
+`
+
 func main() {
+	if len(os.Args) >= 2 {
+		switch os.Args[1] {
+		case "encode":
+			runEncode(os.Args[2:])
+			return
+		case "-h", "--help":
+			fmt.Print(usage)
+			return
+		}
+	}
+
 	var dir string
 	var files []*AudioFile
 
@@ -15,7 +44,8 @@ func main() {
 		dir = os.Args[1]
 		info, err := os.Stat(dir)
 		if err != nil || !info.IsDir() {
-			fmt.Fprintf(os.Stderr, "Error: %q is not a valid directory\n", dir)
+			fmt.Fprintf(os.Stderr, "error: %q is not a valid directory\n", dir)
+			fmt.Fprint(os.Stderr, usage)
 			os.Exit(1)
 		}
 

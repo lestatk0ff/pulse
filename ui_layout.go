@@ -216,11 +216,11 @@ func (a *app) buildActions() {
 		})
 
 	a.actionList = tview.NewList().
-		AddItem("  [1]  Convert to 192 kbps", "New file: <name>_192k.<ext> (same dir)", '1', nil).
-		AddItem("  [2]  Convert to OGG format", "New file: <name>.ogg (same dir)", '2', nil).
-		AddItem("  [z]  Shuffle current list", "Randomize the order shown in the file table", 'z', nil).
-		AddItem("  [r]  Refresh file list", "Re-scan the directory", 'r', nil).
-		AddItem("  [q]  Quit", "Exit Pulse", 'q', func() { a.tv.Stop() })
+		ShowSecondaryText(false).
+		AddItem(" ▸  FLAC → MP3 VBR V0", "", '1', nil).
+		AddItem(" ⇄  Shuffle list", "", 'z', nil).
+		AddItem(" ↻  Refresh", "", 'r', nil).
+		AddItem(" ✕  Quit", "", 'q', func() { a.tv.Stop() })
 
 	a.actionList.SetSelectedFunc(func(idx int, _, _ string, _ rune) {
 		a.runAction(idx)
@@ -257,7 +257,7 @@ func (a *app) buildLayout() {
 	a.actionsFrame = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(a.actionList, 0, 1, false)
 	a.actionsFrame.SetBorder(true).
-		SetTitle(" Actions (Tab to focus, Enter to run) ").
+		SetTitle(" Actions ").
 		SetTitleColor(tcell.ColorAqua).
 		SetBorderColor(tcell.ColorAqua)
 
@@ -361,9 +361,6 @@ func (a *app) buildLayout() {
 				return nil
 			case '1':
 				a.runAction(0)
-				return nil
-			case '2':
-				a.runAction(1)
 				return nil
 			case 'p', 'P':
 				a.togglePause()
